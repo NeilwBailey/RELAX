@@ -2,13 +2,14 @@ clear all; close all; clc;
 
 %% RELAX EEG CLEANING PIPELINE, COPYRIGHT NEIL BAILEY (2022)
 
-%% This script creates a mask of clean and artifact data specific to the length of your data file, which is submitted to a multiple weiner filter (MWF) in order to clean your data.
+%% This script firstly filters your data, then deletes bad electrodes and marks extremely bad periods for exclusion from further processing.
+%% It then creates a mask of clean and artifact data specific to the length of your data file, which is submitted to a multiple weiner filter (MWF) in order to clean your data.
 %% The MWF cleaned data is then submitted to an independent component analysis, and artifactual components detected by ICLabel are cleaned by wavelet enhanced ICA.
 %% The resulting saved files are continuous, very well cleaned of artifacts, while still preserving the neural signal.
 
 %% NOTE THAT THE PIPELINE WILL ONLY WORK ON CONTINUOUS DATA
 
-% RELAX is intended to be fully automated, using the most empiricle approaches
+% RELAX is intended to be fully automated, using the most empirical approaches
 % we could find in order to identify periods of EEG data containing
 % artifacts, as well as removing channels that are either bad, or contain
 % above a specified threshold for the proportion of epochs containing
@@ -21,6 +22,9 @@ clear all; close all; clc;
 
 % 2) Load the "to be processed" files into a single folder, EEGLAB
 % formatted (.set format), and specify this folder location in RELAX_cfg.myPath
+% (these files should have triggers recoded to reflect participant accuracy
+% if desirable, and not have been re-referenced or have any other
+% pre-processing completed yet).
 
 % 3) Specify the parameters in RELAX_cfg. These parameters let you determine
 % a range of factors that influence the mask creation, eg. "how many 
@@ -177,47 +181,56 @@ RELAX_cfg.Perform_wICA_on_ICLabel=1; % 1 = Perform wICA on artifact components m
 
 RELAX_cfg.MWFRoundToCleanBlinks=2; % Which round to clean blinks in (1 for the first, 2 for the second...)
 RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 1 = data might not have blinks, 2 = data definitely doesn't have blinks.
-% 0 = eg. task related data where participants are focused with eyes open, 1 = eg. eyes closed recordings, but with participants who might still open their eyes at times, 2 = eg. eyes closed resting with highly compliant participants and recordings that were strictly made only when participants had their eyes closed.
+% 0 = eg. task related data where participants are focused with eyes open, 
+% 1 = eg. eyes closed recordings, but with participants who might still open their eyes at times, 
+% 2 = eg. eyes closed resting with highly compliant participants and recordings that were strictly made only when participants had their eyes closed.
 
 RELAX_cfg.DriftSeverityThreshold=10; %MAD from the median of all electrodes. This could be set lower and would catch less severe drift 
 RELAX_cfg.PercentWorstEpochsForDrift=0.30; % Maximum percent of epochs to include in the mask from drift artifact type.
 
 RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
-% It seems to me that delay periods >5 can lead to rank deficiency in some files, and as such the algorithm doesn't work. 5 was used in the article. 
-% However, it is possible this is due to the short time windows I am using
-% for blink artifacts. I have set the MWF function to attempt MWF cleaning
+% Delay periods >5 can lead to generalised eigenvector rank deficiency in some files, 
+% and if this occurs cleaning is ineffective. 5 was used by Somers et al (2018). 
+% This is likely to be because data filtering creates a temporal
+% dependency between consecutive datapoints, reducing their independence
+% when including the temporal aspect in the MWF computation.
+% To address this, I have set the MWF function to attempt MWF cleaning
 % at the delay period set above, but if rank deficiency occurs, to reduce
 % the delay period by 1 and try again (for 3 iterations).
+% Using robust detrending (which does not create any temporal dependence,
+% unlike filtering) may be an alternative which avoids rank deficiency 
+% (but our initial test suggested this led to worse cleaning than filtering).
   
-RELAX_cfg.ExtremeVoltageShiftThreshold=20; %20MAD from the median of all epochs for each electrode against itself. This could be set lower and would catch less severe pops
+RELAX_cfg.ExtremeVoltageShiftThreshold=20; % How many MAD from the median of all epochs for each electrode against itself. This could be set lower and would catch less severe pops
 RELAX_cfg.ExtremeAbsoluteVoltageThreshold=500; % microvolts max or min above which will be excluded from cleaning and deleted from data
-RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=8; %3SD from the mean of all epochs for each electrode against itself. This could be set lower and would catch less severe improbable data
-RELAX_cfg.ExtremeSingleChannelKurtosisThreshold=8;%5 % SD from the mean of the single electrodes. This could be set lower and would catch less severe kurtosis 
-RELAX_cfg.ExtremeAllChannelKurtosisThreshold=8; %3 SD from the mean of all electrodes. This could be set lower and would catch less severe kurtosis 
+RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=8; % SD from the mean of all epochs for each electrode against itself. This could be set lower and would catch less severe improbable data
+RELAX_cfg.ExtremeSingleChannelKurtosisThreshold=8; % SD from the mean of the single electrodes. This could be set lower and would catch less severe kurtosis 
+RELAX_cfg.ExtremeAllChannelKurtosisThreshold=8; % SD from the mean of all electrodes. This could be set lower and would catch less severe kurtosis 
 RELAX_cfg.ExtremeBlinkShiftThreshold=8; % How many MAD from the median of blink affected epochs to exclude as extreme data (uses the higher value out of this value and RELAX_cfg.PopSeverityShiftThreshold above, which caters for the fact that blinks don't affect the median, so without this, if data is clean and blinks are large, blinks can get excluded as extreme
 RELAX_cfg.ExtremeDriftSlopeThreshold=-4; % slope of log frequency log power below which to reject as drift without neural activity
 
-% Pad clean periods surrounded by artifacts that are shorter than the following value to be marked as artifacts, 
-% and short artifact periods out into longer periods (to avoid rank deficiency). 
+% Clean periods that last for a shorter duration than the following value to be marked as artifacts, 
+% and pad short artifact periods out into artifact periods of at least the following length when 
+% they are shorter than this value to reduce rank deficiency issues in MWF cleaning). 
 % Note that it's better to include clean periods in the artifact mask rather than the including artifact in the clean mask.
 RELAX_cfg.MinimumArtifactDuration=1200; % in ms. It's better to make this value longer than 1000ms, as doing so will catch diminishing artifacts that aren't detected in a neighbouring 1000ms period, which might still be bad
-RELAX_cfg.MinimumBlinkArtifactDuration=800; % blink marking is based on the maximum point of the blink rather than 1000ms divisions, so this can be shorter than the value above (blinks do not typically last >500ms)
+RELAX_cfg.MinimumBlinkArtifactDuration=800; % blink marking is based on the maximum point of the blink rather than the 1000ms divisions for muscle artifacts, so this can be shorter than the value above (blinks do not typically last >500ms)
 
-% Less essential to test:
-RELAX_cfg.BlinkElectrodes={'FP1';'FPZ';'FP2';'AF3';'AF4';'F3';'F1';'FZ';'F2';'F4'}; % sets the electrodes to average for blink detection using the IQR method
-RELAX_cfg.HEOGLeftpattern = ["AF7", "F7", "FT7", "F5", "T7", "FC5", "C5", "TP7", "AF3"]; % sets electrodes to use for horizontal eye movement detection
-RELAX_cfg.HEOGRightpattern = ["AF8", "F8","FT8","F6","T8", "FC6", "C6", "TP8", "AF4"]; % in priority order (if the electrode in position 1 isn't present, the script will check for electrode in position 2, and so on...).
+RELAX_cfg.BlinkElectrodes={'FP1';'FPZ';'FP2';'AF3';'AF4';'F3';'F1';'FZ';'F2';'F4'}; % sets the electrodes to average for blink detection using the IQR method. These should be frontal electrodes maximally affected by blinks
+% A single HOEG electrode for each side is selected by the script, prioritized in the following order (if the electrode in position 1 isn't present, the script will check for electrode in position 2, and so on...).
+RELAX_cfg.HEOGLeftpattern = ["AF7", "F7", "FT7", "F5", "T7", "FC5", "C5", "TP7", "AF3"]; % sets left side electrodes to use for horizontal eye movement detection. These should be lateral electrodes maximally effected by blinks.
+RELAX_cfg.HEOGRightpattern = ["AF8", "F8","FT8","F6","T8", "FC6", "C6", "TP8", "AF4"]; % sets right side electrodes to use for horizontal eye movement detection. These should be lateral electrodes maximally effected by blinks.
 RELAX_cfg.BlinkMaskFocus=150; % this value decides how much data before and after the right and left base of the eye blink to mark as part of the blink artifact window. 
-% I found 100ms on either side of the blink bases works best with a delay of 7 on the MWF. However, it also seemed to create too short artifact masks at times, which may lead to insufficient rank for MWF.
+% I found 100ms on either side of the blink bases works best with a delay of 7 on the MWF. However, it also seemed to create too short artifact masks at times, which may lead to insufficient rank for MWF, so I left the default as 150ms.
 RELAX_cfg.HorizontalEyeMovementType=2; % 1 to use the IQR method, 2 to use the MAD method for identifying threshold. IQR method less effective for smaller sample sizes (shorter files).
-RELAX_cfg.HorizontalEyeMovementThreshold=2; % MAD deviation from the median that will be marked as horizontal eye movement if both lateral electrodes show activity above this for a certain duration set below.
-RELAX_cfg.HorizontalEyeMovementThresholdIQR=1.5; % IQR deviation that will be marked as horizontal eye movement if both lateral electrodes show activity above this for a certain duration set below.
-RELAX_cfg.HorizontalEyeMovementTimepointsExceedingThreshold=25; % The number of datapoints exceeding horizontal eye movement threshold within the test period set below before the period is marked as horizontal eye movement.
+RELAX_cfg.HorizontalEyeMovementThreshold=2; % MAD deviation from the median that will be marked as horizontal eye movement if both lateral electrodes show activity above this for a certain duration (duration set below).
+RELAX_cfg.HorizontalEyeMovementThresholdIQR=1.5; % If IQR method set above, IQR deviation that will be marked as horizontal eye movement if both lateral electrodes show activity above this for a certain duration (duration set below).
+RELAX_cfg.HorizontalEyeMovementTimepointsExceedingThreshold=25; % The number of timepoints (ms) that exceed the horizontal eye movement threshold within the test period (set below) before the period is marked as horizontal eye movement.
 RELAX_cfg.HorizontalEyeMovementTimepointsTestWindow=(2*RELAX_cfg.HorizontalEyeMovementTimepointsExceedingThreshold)-1; % Window duration to test for horizontal eye movement, set to 2x the value above by default.
 RELAX_cfg.HorizontalEyeMovementFocus=200; % Buffer window, masking periods earlier and later than the time where horizontal eye movements exceed the threshold.
 
-RELAX_cfg.HighPassFilter=0.25; % Sets the high pass filter. 1Hz is good if you're examining just oscillatory data, 0.25Hz seems to be the highest before ERPs are adversely affected by filtering 
-%(lower is better, but I find a minority of my files show drift at 0.3Hz even).
+RELAX_cfg.HighPassFilter=0.25; % Sets the high pass filter. 1Hz is best for ICA decomposition if you're examining just oscillatory data, 0.25Hz seems to be the highest before ERPs are adversely affected by filtering 
+%(lower than 0.2Hz may be better, but I find a minority of my files show drift at 0.3Hz even).
 if RELAX_cfg.HighPassFilter>0.25
     Warning='You have high pass filtered above 0.25, which can adversely affect ERP analyses';
 end
@@ -225,44 +238,51 @@ RELAX_cfg.LowPassFilter=80; % If you filter out data below 75Hz, you can't use t
 RELAX_cfg.LineNoiseFrequency=50; % Frequencies for bandstop filter in order to address line noise (set to 60 in countries with 60Hz line noise, and 50 in countries with 50Hz line noise).
 
 RELAX_cfg.ElectrodesToDelete={'CB1'; 'CB2'; 'HEOG'; 'IO1'; 'M1'; 'M2'; 'LO1'; 'LO2'; 'E1'; 'E3'; 'ECG'; 'SO1'; 'ECG'; 'SPARE1'; 'SPARE2'; 'SPARE3'; 'BP1'; 'BP2'; 'VEOG'};
-% Set electrodes that aren't necessary for cleaning or analysis to be
-% deleted. The cleaning pipeline does not need eye, heart, or mastoid
-% electrodes (and has been validated without them).
+% If your EEG recording includes non-scalp electrodes or electrodes that you want to delete before cleaning, you can set them to be deleted here. 
+% The RELAX cleaning pipeline does not need eye, heart, or mastoid electrodes for effective cleaning.
 
-RELAX_cfg.KeepAllInfo=0; % setting this value to 1 keeps all the details from the MWF pre-processing and MWF computation. Helpful for debugging if necessary but makes for >0.7GB file sizes.
-RELAX_cfg.saveextremesrejected=0; % setting this value to 1 tells the script to save the data after only extreme channels have been rejected and extreme periods have been noted
+RELAX_cfg.KeepAllInfo=0; % setting this value to 1 keeps all the details from the MWF pre-processing and MWF computation. Helpful for debugging if necessary but makes for large file sizes.
+RELAX_cfg.saveextremesrejected=0; % setting this value to 1 tells the script to save the data after only filtering, extreme channels have been rejected and extreme periods have been noted
 RELAX_cfg.saveround1=0; % setting this value to 1 tells the script to save the first round of MWF pre-processing
 RELAX_cfg.saveround2=0; % setting this value to 1 tells the script to save the second round of MWF pre-processing
 RELAX_cfg.saveround3=0; % setting this value to 1 tells the script to save the third round of MWF pre-processing
 
-RELAX_cfg.OnlyIncludeTaskRelatedEpochs=0; % If this =1, the MWF clean and artifact templates will only include data within 5 seconds of a task trigger.
+RELAX_cfg.OnlyIncludeTaskRelatedEpochs=0; % If this =1, the MWF clean and artifact templates will only include data within 5 seconds of a task trigger (other periods will be marked as NaN, which the MWF script ignores).
 
-RELAX_cfg.MuscleSlopeThreshold=-0.59; %log frequency/ log power slope threshold for muscle artifact. Less stringent = -0.31, Middle Stringency = -0.59 or more stringent = -0.72, more negative thresholds remove more muscle.
-RELAX_cfg.PercentWorstEpochsForMuscle=0.50;  % I set this higher, because otherwise muscle artifacts can considerably influence the clean mask and add noise into the data
-RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % proportion of all epochs marked as containing muscle activity before a channel is deleted
-RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05;
+RELAX_cfg.MuscleSlopeThreshold=-0.59; %log-frequency log-power slope threshold for muscle artifact. Less stringent = -0.31, Middle Stringency = -0.59 or more stringent = -0.72, more negative thresholds remove more muscle.
+RELAX_cfg.PercentWorstEpochsForMuscle=0.50;  % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
+% I set this reasonably high, because otherwise muscle artifacts could considerably influence the clean mask and add noise into the data
+RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing muscle activity is higher than this, the electrode is deleted
+RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing extreme artifacts is higher than this, the electrode is deleted
 
-% OnlyIncludeTaskRelatedEpochs: this means the MWF won't be distracted by potential large artifacts
-% outside of task related periods. However, it also may mean that event
-% related periods are included in the artifact template (to be removed). If
-% artifact masks land disproportionately around triggers (or certain types
-% of triggers), my sense is that the EEG activity time locked to that
-% trigger will be considered an artifact and filtered out by the MWF,
+%% Notes on the above parameter settings:
+% OnlyIncludeTaskRelatedEpochs: this means the MWF cleaning templates 
+% won't be distracted by potential large artifacts outside of task related
+% periods. However, it also may mean that event related periods are
+% included in the artifact template (to be removed). If artifact masks land
+% disproportionately around triggers (or certain types of triggers), my
+% sense is that all the EEG activity time locked to that trigger will be
+% considered an artifact and filtered out by the MWF (including ERPs),
 % potentially reducing your ERP for example. An alternative solution to
 % this would be to record a sufficient amount of activity before / after
 % the task related activity, which includes all the same artifacts as
-% within the task, but also a sufficient amount of clean data, and to use
-% this to create the artifact masks (then perhaps marking the task related
-% data as only either clean, or NaNs if they contain artifacts (which will be cleaned but aren't
-% thought of as artifacts for the artifact template).
+% within the task, but also a sufficient amount of clean data. Then use
+% this data to create the artifact masks (then perhaps marking the task 
+% related data as only either clean, or NaNs if they contain artifacts
+% (which will be cleaned but aren't thought of as artifacts for the
+% artifact template). This would prevent the ERP activity of interest from
+% being included in the artifact tempalte (and potentially cleaned)
 
-% MuscleSlopeThreshold: (-0.31 = data from paralysed participants showed no independent
-% components with a slope value more positive than this (so excluding above
-% this means only excluding data that we know must be EMG influenced. 
-% Using this value means leaving low level EMG data in, and only eliminating the data we know is definitely EMG)
+% MuscleSlopeThreshold: (-0.31 = data from paralysed participants showed no
+% independent components with a slope value more positive than this (so
+% excluding slopes above this threshold means only excluding data that we
+% know must be influenced by EMG). Using -0.31 as the threshold means
+% possibly leaving low level EMG data in, and only eliminating the data we
+% know is definitely EMG)
 % (-0.59 is where the histograms between paralysed ICs and EMG ICs cross,
 % so above this value contains a very small amount of the brain data, 
-% and over 50% of the EMG data. Above this point, data is more likely to be EMG than brain)
+% and over 50% of the EMG data. Above this point, data is more likely to be
+% EMG than brain)
 % (-0.72 is the maximum of the histogram of the paralysed IC data, so
 % excluding more positive values than this will exclude most of the EMG
 % data, but also some brain data).
@@ -319,7 +339,8 @@ end
 %% Loop over each file in the directory list 
 for Subjects=1:numel(RELAX_cfg.files)
     RELAX_cfg.filename=RELAX_cfg.files{Subjects};
-    clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'BlinkerFailed' 'NoBlinksDetected' 'Warning';
+    clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants'...
+        'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'NoBlinksDetected' 'Warning';
     %% Load data (assuming the data is in EEGLAB .set format):
     
     cd(RELAX_cfg.myPath);
@@ -328,7 +349,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     ParticipantID = extractBefore(RELAX_cfg.filename,".");
     EEG.RELAXProcessing.aParticipantID=cellstr(ParticipantID);
     
-    EEG.RELAX.averagerereferenced=0;
+    EEG.RELAX.Data_has_been_averagerereferenced=0;
     EEG.RELAX.Data_has_been_cleaned=0;
     RELAX_cfg.ms_per_sample=(1000/EEG.srate);
 
@@ -338,18 +359,10 @@ for Subjects=1:numel(RELAX_cfg.files)
     %% Delete channels that are not relevant if present       
     EEG=pop_select(EEG,'nochannel',RELAX_cfg.ElectrodesToDelete);
     EEG = eeg_checkset( EEG );
-    EEG.allchan=EEG.chanlocs;
-        
-    % Grab a copy of the unfiltered EEG data. BLINKER performs better with
-    % the unfiltered data.
-    ContinuousEEGUnfiltered = EEG;
- 
+    EEG.allchan=EEG.chanlocs; % take list of all included channels before any rejections
+
     %% Band Pass filter data from 0.25 to 80Hz
 
-    % The next lines define bandpass and bandstop filters. The
-    % bandstop notch filter removes 50Hz line noise. The bandpass filter
-    % gets rid of low and high frequency noise.
-    
     % Fourth order butterworth filtering at 0.3Hz and above distorts ERPs, whereas 0.2Hz
     % has a negligible effect on ERPs. Some of our data showed drift at
     % 0.3Hz, so we've gotten as close as possible to filtering that out
@@ -388,43 +401,38 @@ for Subjects=1:numel(RELAX_cfg.files)
     % PREP pipeline: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4471356/
     noisyOut = findNoisyChannels(EEG);  
     EEG.RELAXProcessing.PREPBasedChannelToReject={};
-    for x=1:size(noisyOut.noisyChannels.all,2)
+    for x=1:size(noisyOut.noisyChannels.all,2) % loop through output of PREP's findNoisyChannels and take a record of noisy electrodes for deletion:
         PREPBasedChannelToReject{x}=EEG.chanlocs(noisyOut.noisyChannels.all(x)).labels;
         EEG.RELAXProcessing.PREPBasedChannelToReject = PREPBasedChannelToReject';
     end
-    EEG=pop_select(EEG,'nochannel',noisyOut.noisyChannels.all);
-    ContinuousEEGUnfiltered=pop_select(ContinuousEEGUnfiltered,'nochannel',noisyOut.noisyChannels.all);
-    ContinuousEEGUnfiltered.RELAX.ListOfChannelsAfterRejections={EEG.chanlocs.labels};
-    EEG.RELAX.ListOfChannelsAfterRejections={EEG.chanlocs.labels};
+    EEG=pop_select(EEG,'nochannel',noisyOut.noisyChannels.all); % delete noisy electrodes detected by PREP
+    EEG.RELAX.ListOfChannelsAfterRejections={EEG.chanlocs.labels}; % Get list of good channels
     continuousEEG=EEG;
 
-    [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(continuousEEG, RELAX_cfg);
-    [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuousEEG, epochedEEG, RELAX_cfg);
+    [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(continuousEEG, RELAX_cfg); % Epoch data, detect extremely bad data, delete channels if over the set threshold for proportion of data affected by extreme outlier for each electrode
+    [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuousEEG, epochedEEG, RELAX_cfg); % Mark extreme periods for exclusion from MWF cleaning, and deletion before wICA cleaning
 
-    % Use the unfiltered continuous data to detect eye blinks and mark
+    % Use the continuous data to detect eye blinks and mark
     % these in the EEG.event as well as in the mask. The output is
-    % continuous data but includes all the previous markings from the
-    % epoched data.
+    % continuous data but includes all the previous extreme period 
+    % markings from the epoched data.
     if RELAX_cfg.ProbabilityDataHasNoBlinks<2
-        [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, epochedEEG, RELAX_cfg);
-        % If a participants doesn't show any blinks, make a note:
-        if continuousEEG.RELAX.IQRmethodDetectedBlinks(1,1)==0
+        [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, epochedEEG, RELAX_cfg); % use an IQR threshold method to detect and mark blinks
+        if continuousEEG.RELAX.IQRmethodDetectedBlinks(1,1)==0 % If a participants doesn't show any blinks, make a note
             NoBlinksDetected{Subjects,1}=ParticipantID; 
         end
-        [continuousEEG, epochedEEG] = RELAX_metrics_blinks(continuousEEG, epochedEEG);
+        [continuousEEG, epochedEEG] = RELAX_metrics_blinks(continuousEEG, epochedEEG); % record blink amplitude ratio from raw data for comparison.
     end
     
-    % Take a copy of the uncleaned data here for calculation of SER and ARR
-    % including all cleaning at the end:
-    rawEEG=continuousEEG;
+    rawEEG=continuousEEG; % Take a copy of the not yet cleaned data for calculation of all cleaning SER and ARR at the end
     
     if RELAX_cfg.saveextremesrejected==1
         mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected'])
         SaveSetExtremes_Rejected =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected', filesep ParticipantID '_Extremes_Rejected.set'];    
-        EEG = pop_saveset( rawEEG, SaveSetExtremes_Rejected ); 
+        EEG = pop_saveset( rawEEG, SaveSetExtremes_Rejected ); % If desired, save data here with bad channels deleted, filtering applied, extreme outlying data periods marked
     end
 
-    %% THIS SECTION CONTAINS FUNCTIONS WHICH MARK ARTIFACTS
+    %% THIS SECTION CONTAINS FUNCTIONS WHICH MARK AND CLEAN MUSCLE ARTIFACTS
     % Any one of these functions can be commented out to ignore those artifacts
     % when creating the mask    
     if RELAX_cfg.Do_MWF_Once==1
@@ -432,12 +440,11 @@ for Subjects=1:numel(RELAX_cfg.files)
         % Use epoched data and FFT to detect slope of log frequency log
         % power, add periods exceeding muscle threshold to mask:
         [continuousEEG, epochedEEG] = RELAX_muscle(continuousEEG, epochedEEG, RELAX_cfg);        
-        [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epochedEEG, RELAX_cfg);
+        [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epochedEEG, RELAX_cfg); % record muscle contamination metrics from raw data for comparison.
 
-        %% Return to the "EEG" variable for MWF processing:
-        EEG=continuousEEG;
+        EEG=continuousEEG; % Return continuousEEG to the "EEG" variable for MWF processing
 
-        % If including eye blink cleaning in second round MWF, then insert
+        % If including eye blink cleaning in first round MWF, then insert
         % eye blink mask into noise mask:
         if RELAX_cfg.MWFRoundToCleanBlinks==1
             EEG.RELAXProcessing.Details.NoiseMaskFullLength(EEG.RELAX.eyeblinkmask==1)=1;
@@ -445,7 +452,9 @@ for Subjects=1:numel(RELAX_cfg.files)
             EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
         end
 
-        % Combine the extreme period mask NaNs into the full noise mask:
+        % Combine the extreme period mask NaNs into the full noise mask, so
+        % these periods are ignored by the MWF cleaning template when
+        % constructing an artifact and clean period mask.
         for e=1:size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2)
             if isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods(1,e))
                 EEG.RELAXProcessing.Details.NoiseMaskFullLength(1,e)=NaN;
@@ -768,8 +777,9 @@ for Subjects=1:numel(RELAX_cfg.files)
     save(savefileone,'RELAX_cfg')
 end
 
-clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'BlinkerFailed' 'NoBlinksDetected' 'Warning';
-
+clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants'...
+        'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'NoBlinksDetected' 'Warning';
+    
 if exist('CleanedMetrics','var')
     try
         figure('Name','BlinkAmplitudeRatio');
