@@ -179,6 +179,9 @@ RELAX_cfg.Do_MWF_Twice=1; % 1 = Perform the MWF cleaning a second time (1 for ye
 RELAX_cfg.Do_MWF_Thrice=1; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no). I think cleaning drift in this is a good idea.
 RELAX_cfg.Perform_wICA_on_ICLabel=1; % 1 = Perform wICA on artifact components marked by ICLabel (1 for yes, 0 for no).
 
+RELAX_cfg.computerawmetrics=1;
+RELAX_cfg.computecleanedmetrics=1;
+
 RELAX_cfg.MWFRoundToCleanBlinks=2; % Which round to clean blinks in (1 for the first, 2 for the second...)
 RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 1 = data might not have blinks, 2 = data definitely doesn't have blinks.
 % 0 = eg. task related data where participants are focused with eyes open, 
@@ -421,7 +424,9 @@ for Subjects=1:numel(RELAX_cfg.files)
         if continuousEEG.RELAX.IQRmethodDetectedBlinks(1,1)==0 % If a participants doesn't show any blinks, make a note
             NoBlinksDetected{Subjects,1}=ParticipantID; 
         end
+        if RELAX_cfg.computerawmetrics==1
         [continuousEEG, epochedEEG] = RELAX_metrics_blinks(continuousEEG, epochedEEG); % record blink amplitude ratio from raw data for comparison.
+        end
     end
     
     rawEEG=continuousEEG; % Take a copy of the not yet cleaned data for calculation of all cleaning SER and ARR at the end
@@ -439,8 +444,10 @@ for Subjects=1:numel(RELAX_cfg.files)
 
         % Use epoched data and FFT to detect slope of log frequency log
         % power, add periods exceeding muscle threshold to mask:
-        [continuousEEG, epochedEEG] = RELAX_muscle(continuousEEG, epochedEEG, RELAX_cfg);        
-        [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epochedEEG, RELAX_cfg); % record muscle contamination metrics from raw data for comparison.
+        [continuousEEG, epochedEEG] = RELAX_muscle(continuousEEG, epochedEEG, RELAX_cfg);  
+        if RELAX_cfg.computerawmetrics==1
+            [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epochedEEG, RELAX_cfg); % record muscle contamination metrics from raw data for comparison.
+        end
 
         EEG=continuousEEG; % Return continuousEEG to the "EEG" variable for MWF processing
 
@@ -461,21 +468,19 @@ for Subjects=1:numel(RELAX_cfg.files)
             end
         end
         
-        % The following eliminates very brief lengths of marked periods 
-        % during the mask for MWF cleaning (without doing this, very short periods can
-        % lead to rank deficiency)    
-        % If period has been marked as shorter than
-        % RELAX_cfg.MinimumArtifactDuration, then pad it out:
-        [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks');
-        
+        % The following pads very brief lengths of mask periods
+        % in the template (without doing this, very short periods can
+        % lead to rank deficiency):
+        [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks'); % If period has been marked as shorter than RELAX_cfg.MinimumArtifactDuration, then pad it out.
         EEG.RELAX.NoiseMaskFullLengthR1=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
         EEG.RELAXProcessing.ProportionMarkedAllArtifacts=nanmean(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
+        EEG.RELAX.ProportionMarkedAllArtifactsR1=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
               
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);          
           
-        EEG.RELAXProcessingRoundOne=EEG.RELAXProcessing;          
-        RELAXProcessingRoundOne=EEG.RELAXProcessingRoundOne;
+        EEG.RELAXProcessingRoundOne=EEG.RELAXProcessing; % Record MWF cleaning details from round 1 in EEG file          
+        RELAXProcessingRoundOne=EEG.RELAXProcessingRoundOne; % Record MWF cleaning details from round 1 into file for all participants
         
         if isfield(RELAXProcessingRoundOne,'Details')
             RELAXProcessingRoundOne=rmfield(RELAXProcessingRoundOne,'Details');
@@ -485,6 +490,7 @@ for Subjects=1:numel(RELAX_cfg.files)
                 EEG.RELAXProcessingRoundOne=rmfield(EEG.RELAXProcessingRoundOne,'Details');
             end
         end
+        
         % Record processing statistics for all participants in single table:
         RELAXProcessingRoundOneAllParticipants(Subjects,:) = struct2table(RELAXProcessingRoundOne,'AsArray',true);
         EEG = rmfield(EEG,'RELAXProcessing');
@@ -498,7 +504,7 @@ for Subjects=1:numel(RELAX_cfg.files)
 
     %% PERFORM A SECOND ROUND OF MWF. THIS IS HELPFUL IF THE FIRST ROUND DOESN'T SUFFICIENTLY CLEAN ARTIFACTS. 
 
-    % It has been suggested to be useful by Somers et al (2018)
+    % This has been suggested to be useful by Somers et al (2018)
     % (particularly when used in a cascading fashion). 
 
     % However, I can see risks. If artifact masks fall on task relevant
@@ -507,12 +513,12 @@ for Subjects=1:numel(RELAX_cfg.files)
     
     if RELAX_cfg.Do_MWF_Twice==1
 
-        ParticipantID = extractBefore(RELAX_cfg.filename,".");
         EEG.RELAXProcessing.aParticipantID=cellstr(ParticipantID);
         EEG.RELAXProcessing.ProportionMarkedBlinks=0;
         
-        % If blinks weren't initially detected, detect them here
-        % (this happens in <1/200 cases, but is a good back up.
+        % If blinks weren't initially detected because they were 
+        % disguised by the the muscle artifact, detect them here
+        % (this happens in <1/200 cases, but is a good back up).
         if RELAX_cfg.ProbabilityDataHasNoBlinks==0
             if EEG.RELAX.IQRmethodDetectedBlinks(1,1)==0
                 continuousEEG=EEG;
@@ -531,26 +537,29 @@ for Subjects=1:numel(RELAX_cfg.files)
             end
         end
   
-        % Combine the extreme masks NaNs into the full noise mask:
+        % Combine the extreme period mask NaNs into the full noise mask, so
+        % these periods are ignored by the MWF cleaning template when
+        % constructing an artifact and clean period mask.
         for e=1:size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2)
             if isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods(1,e))
                 EEG.RELAXProcessing.Details.NoiseMaskFullLength(1,e)=NaN;
             end
         end
-        % The following eliminates very brief lengths of currently clean marked
-        % periods during the mask (without doing this, very short periods can
-        % lead to rank deficiency)  
+        
+        % The following pads very brief lengths of mask periods
+        % in the template (without doing this, very short periods can
+        % lead to rank deficiency): 
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'blinks');
         
         EEG.RELAX.NoiseMaskFullLengthR2=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
         EEG.RELAXProcessing.ProportionMarkedAllArtifacts=nanmean(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
+        EEG.RELAX.ProportionMarkedAllArtifactsR2=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
 
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);           
         
-        EEG.RELAXProcessingRoundTwo=EEG.RELAXProcessing;
-        EEG.RELAX.ProportionMarkedAllArtifactsR2=EEG.RELAXProcessing.ProportionMarkedAllArtifacts;        
-        RELAXProcessingRoundTwo=EEG.RELAXProcessingRoundTwo;
+        EEG.RELAXProcessingRoundTwo=EEG.RELAXProcessing; % Record MWF cleaning details from round 2 in EEG file
+        RELAXProcessingRoundTwo=EEG.RELAXProcessingRoundTwo; % Record MWF cleaning details from round 2 into file for all participants
         if isfield(RELAXProcessingRoundTwo,'Details')
             RELAXProcessingRoundTwo=rmfield(RELAXProcessingRoundTwo,'Details');
         end
@@ -562,7 +571,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         % Record processing statistics for all participants in single table:
         RELAXProcessingRoundTwoAllParticipants(Subjects,:) = struct2table(RELAXProcessingRoundTwo,'AsArray',true);
         EEG = rmfield(EEG,'RELAXProcessing');
-        % Save round 1 MWF pre-processing:
+        % Save round 2 MWF pre-processing:
         if RELAX_cfg.saveround2==1
             mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF'])
             SaveSetMWF2 =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF', filesep ParticipantID '_MWF2.set'];    
@@ -570,20 +579,10 @@ for Subjects=1:numel(RELAX_cfg.files)
         end     
     end
     
-    %% PERFORM A THIRD ROUND OF MWF. 
-
-    % It has been suggested to be useful by Somers et al (2018)
-    % (particularly when used in a cascading fashion). 
-
-    % However, I can see risks. If artifact masks fall on task relevant
-    % activity in both rounds of the MWF, it may be that the task relevant data
-    % is just cleaned right out of the signal.
-    
+    %% PERFORM A THIRD ROUND OF MWF.    
     if RELAX_cfg.Do_MWF_Thrice==1
-        
-        ParticipantID = extractBefore(RELAX_cfg.filename,".");
+
         EEG.RELAXProcessing.aParticipantID=cellstr(ParticipantID);
-        
         EEG.RELAXProcessing.ProportionMarkedBlinks=0;
         % If less than 5% of data was masked as eye blink cleaning in second round MWF, then insert
         % eye blink mask into noise mask in round 3:
@@ -602,15 +601,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         
         %% THIS SECTION CONTAINS FUNCTIONS WHICH MARK ARTIFACTS
 
-        % Any one of these functions can be commented out to ignore those artifacts
-        % when creating the mask
-        
-        % Use epoched data to add periods showing excessive amplitudes at
-        % any time, excessive amplitude shifts across the epoch, and epochs
-        % with excessive deviation from the all channel median to the mask
-        % (based on median absolute deviation):
-        
-        [continuousEEG, epochedEEG] = RELAX_drift(continuousEEG, epochedEEG, RELAX_cfg);
+        [continuousEEG, epochedEEG] = RELAX_drift(continuousEEG, epochedEEG, RELAX_cfg); % Use epoched data to add periods showing excessive drift to the mask
         
         % Use the filtered continuous data to detect horizontal eye
         % movements and mark these in the EEG.event as well as in the mask.
@@ -628,7 +619,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         %% Return to the "EEG" variable for MWF processing:
         EEG=continuousEEG;
         
-        % If including eye blink cleaning in second round MWF, then insert
+        % If including eye blink cleaning in third round MWF, then insert
         % eye blink mask into noise mask:
         if RELAX_cfg.MWFRoundToCleanBlinks==3
             EEG.RELAXProcessing.Details.NoiseMaskFullLength(EEG.RELAX.eyeblinkmask==1)=1;
@@ -636,16 +627,29 @@ for Subjects=1:numel(RELAX_cfg.files)
             EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
         end
         
+        % Combine the extreme period mask NaNs into the full noise mask, so
+        % these periods are ignored by the MWF cleaning template when
+        % constructing an artifact and clean period mask.
+        for e=1:size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2)
+            if isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods(1,e))
+                EEG.RELAXProcessing.Details.NoiseMaskFullLength(1,e)=NaN;
+            end
+        end
+        
+        % The following pads very brief lengths of mask periods
+        % in the template (without doing this, very short periods can
+        % lead to rank deficiency): 
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks');
         
         EEG.RELAX.NoiseMaskFullLengthR3=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
         EEG.RELAXProcessing.ProportionMarkedAllArtifacts=nanmean(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
+        EEG.RELAX.ProportionMarkedAllArtifactsR3=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
 
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);               
         
-        EEG.RELAXProcessingRoundThree=EEG.RELAXProcessing; 
-        RELAXProcessingRoundThree=EEG.RELAXProcessing;
+        EEG.RELAXProcessingRoundThree=EEG.RELAXProcessing; % Record MWF cleaning details from round 3 in EEG file
+        RELAXProcessingRoundThree=EEG.RELAXProcessing; % Record MWF cleaning details from round 3 into file for all participants
         
         if isfield(RELAXProcessingRoundThree,'Details')
             RELAXProcessingRoundThree=rmfield(RELAXProcessingRoundThree,'Details');
@@ -693,7 +697,8 @@ for Subjects=1:numel(RELAX_cfg.files)
         % also seems to be comparable (or only slightly worse) than
         % extended infomax (run via cudaICA for speed).
         EEG.RELAXProcessing_wICA.aParticipantID=cellstr(ParticipantID);
-        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,'fastica_symm', 1, 0, EEG.srate, 5,'coif5'); % add: 'Report_all_wICA_info' to the end = optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category (~20s slower if on)
+        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,'fastica_symm', 1, 0, EEG.srate, 5,'coif5'); 
+        % adding 'Report_all_wICA_info' to the end of the parameters specified will optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category (function is ~20s slower if this is implemented)
         EEG = eeg_checkset( EEG );
 
         RELAXProcessing_wICA=EEG.RELAXProcessing_wICA;
@@ -704,41 +709,42 @@ for Subjects=1:numel(RELAX_cfg.files)
     EEG.RELAX.Data_has_been_cleaned=1;
     
     %% COMPUTE CLEANED METRICS:
-        
-    [continuousEEG, epochedEEG] = RELAX_epoching(EEG, RELAX_cfg);
-    [continuousEEG, ~] = RELAX_metrics_blinks(continuousEEG, epochedEEG);
-    [continuousEEG, ~] = RELAX_metrics_muscle(continuousEEG, epochedEEG, RELAX_cfg);
-    [continuousEEG] = RELAX_metrics_final_SER_and_ARR(rawEEG, continuousEEG); % this is only a good metric for testing only the cleaning of artifacts marked for cleaning by MWF, see notes in function.
-    EEG=continuousEEG;
-    EEG = rmfield(EEG,'RELAXProcessing');
+    if RELAX_cfg.computecleanedmetrics==1    
+        [continuousEEG, epochedEEG] = RELAX_epoching(EEG, RELAX_cfg);
+        [continuousEEG, ~] = RELAX_metrics_blinks(continuousEEG, epochedEEG);
+        [continuousEEG, ~] = RELAX_metrics_muscle(continuousEEG, epochedEEG, RELAX_cfg);
+        [continuousEEG] = RELAX_metrics_final_SER_and_ARR(rawEEG, continuousEEG); % this is only a good metric for testing only the cleaning of artifacts marked for cleaning by MWF, see notes in function.
+        EEG=continuousEEG;
+        EEG = rmfield(EEG,'RELAXProcessing');
 
-    if isfield(EEG.RELAX, 'Metrics')
-        if isfield(EEG.RELAX.Metrics, 'Cleaned')
-            if isfield(EEG.RELAX.Metrics.Cleaned,'BlinkAmplitudeRatio')
-                CleanedMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio;
-                CleanedMetrics.BlinkAmplitudeRatio(CleanedMetrics.BlinkAmplitudeRatio==0)=NaN;
+        if isfield(EEG.RELAX, 'Metrics')
+            if isfield(EEG.RELAX.Metrics, 'Cleaned')
+                if isfield(EEG.RELAX.Metrics.Cleaned,'BlinkAmplitudeRatio')
+                    CleanedMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio;
+                    CleanedMetrics.BlinkAmplitudeRatio(CleanedMetrics.BlinkAmplitudeRatio==0)=NaN;
+                end
+                if isfield(EEG.RELAX.Metrics.Cleaned,'MeanMuscleStrengthFromOnlySuperThresholdValues')
+                    CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues; 
+                    CleanedMetrics.MeanMuscleStrengthScaledByProportionShowingMuscle(Subjects)=EEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthScaledByProportionShowingMuscle;
+                    CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX.Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
+                end
+                if isfield(EEG.RELAX.Metrics.Cleaned,'All_SER')
+                    CleanedMetrics.All_SER.(pipeline{pipe})(Subjects,1)=EEG.RELAX.Metrics.Cleaned.All_SER;
+                    CleanedMetrics.All_ARR.(pipeline{pipe})(Subjects,1)=EEG.RELAX.Metrics.Cleaned.All_ARR;
+                end
             end
-            if isfield(EEG.RELAX.Metrics.Cleaned,'MeanMuscleStrengthFromOnlySuperThresholdValues')
-                CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues; 
-                CleanedMetrics.MeanMuscleStrengthScaledByProportionShowingMuscle(Subjects)=EEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthScaledByProportionShowingMuscle;
-                CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX.Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
-            end
-            if isfield(EEG.RELAX.Metrics.Cleaned,'All_SER')
-                CleanedMetrics.All_SER.(pipeline{pipe})(Subjects,1)=EEG.RELAX.Metrics.Cleaned.All_SER;
-                CleanedMetrics.All_ARR.(pipeline{pipe})(Subjects,1)=EEG.RELAX.Metrics.Cleaned.All_ARR;
-            end
+            if isfield(EEG.RELAX.Metrics, 'Raw')
+                if isfield(EEG.RELAX.Metrics.Raw,'BlinkAmplitudeRatio')
+                    RawMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio;
+                    RawMetrics.BlinkAmplitudeRatio(RawMetrics.BlinkAmplitudeRatio==0)=NaN;
+                end
+                if isfield(EEG.RELAX.Metrics.Raw,'MeanMuscleStrengthFromOnlySuperThresholdValues')
+                    RawMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX.Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues; 
+                    RawMetrics.MeanMuscleStrengthScaledByProportionShowingMuscle(Subjects)=EEG.RELAX.Metrics.Raw.MeanMuscleStrengthScaledByProportionShowingMuscle;
+                    RawMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX.Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
+                end
+            end   
         end
-        if isfield(EEG.RELAX.Metrics, 'Raw')
-            if isfield(EEG.RELAX.Metrics.Raw,'BlinkAmplitudeRatio')
-                RawMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio;
-                RawMetrics.BlinkAmplitudeRatio(RawMetrics.BlinkAmplitudeRatio==0)=NaN;
-            end
-            if isfield(EEG.RELAX.Metrics.Raw,'MeanMuscleStrengthFromOnlySuperThresholdValues')
-                RawMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX.Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues; 
-                RawMetrics.MeanMuscleStrengthScaledByProportionShowingMuscle(Subjects)=EEG.RELAX.Metrics.Raw.MeanMuscleStrengthScaledByProportionShowingMuscle;
-                RawMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX.Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
-            end
-        end   
     end
     
     %% SAVE FILE:
