@@ -671,20 +671,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     % Reject periods that were marked as NaNs in the MWF masks because they 
     % showed extreme shift within the epoch or extremely improbable data:
     EEG = eeg_eegrej( EEG, EEG.RELAX.ExtremelyBadPeriodsForDeletion);
-    
-    % Check if there's enough data for effective ICA, using Makoto's rule
-    % of thumb that ICA requires data length of ((number of channels)^2)*30
-    % if data were sampled at 250 Hz (assuming that higher sampling
-    % rates require the same time duration of data as low sampling rates,
-    % so 1000Hz sampling rates require ((number of channels)^2)*120)
-    % (https://sccn.ucsd.edu/wiki/Makoto%27s_useful_EEGLAB_code)
-    
-    if ((EEG.NumberOfChannelsAfterRejections^2)*(120/RELAX_cfg.ms_per_sample))>EEG.pnts
-        EEG.RELAXProcessing_wICA.DataTooShortForValidICA='yes';
-    else
-        EEG.RELAXProcessing_wICA.DataTooShortForValidICA='no';
-    end
- 
+
     %% Perform wICA on ICLabel identified artifacts that remain:
     if RELAX_cfg.Perform_wICA_on_ICLabel==1
         % The following performs wICA, implemented on only the components
@@ -696,7 +683,8 @@ for Subjects=1:numel(RELAX_cfg.files)
         % inferior at cleaning compared to AMICA (which is much slower). It
         % also seems to be comparable (or only slightly worse) than
         % extended infomax (run via cudaICA for speed).
-        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,'fastica_symm', 1, 0, EEG.srate, 5);
+        EEG.RELAXProcessing_wICA.aParticipantID=cellstr(ParticipantID);
+        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,'fastica_symm', 1, 0, EEG.srate, 5,'coif5'); % add: 'Report_all_wICA_info' to the end = optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category (~20s slower if on)
         EEG = eeg_checkset( EEG );
 
         RELAXProcessing_wICA=EEG.RELAXProcessing_wICA;

@@ -60,6 +60,10 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     if nargin>6 && ~isempty(varargin{6})
     wavename=varargin{6}; else wavename='coif5';end
 
+    if nargin>7 && ~isempty(varargin{7})
+    Report_all_wICA_info=varargin{7}; 
+    else Report_all_wICA_info='off';end % NWB addition to optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category ('Report_all_wICA_info' if on)
+
     fastica_symm_Didnt_Converge=[0 0 0]; % NWB addition to track whether fastica_symm doesn't converge
 
     % run ICA using "runica" or "radical"
@@ -231,7 +235,69 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     %subtract out wavelet artifact signal from EEG signal
     wavcleanEEG=EEG2D-artifacts;
     EEG.data = wavcleanEEG;
+        
     EEG.RELAXProcessing_wICA.fastica_symm_Didnt_Converge=fastica_symm_Didnt_Converge; % Tracks whether fastica_symm showed convergence issues (1) or not (0), and how many non-convergences. If 3 non-convergences, then fastica_defl was implemented.
+    
+    % Check if data might have been too short for effective ICA, using Makoto's rule
+    % of thumb that ICA requires data length of ((number of channels)^2)*30
+    % if data were sampled at 250 Hz (assuming that higher sampling
+    % rates require the same time duration of data as low sampling rates,
+    % so 1000Hz sampling rates require ((number of channels)^2)*120)
+    % (https://sccn.ucsd.edu/wiki/Makoto%27s_useful_EEGLAB_code)
+    ms_per_sample=(1000/EEG.srate);
+    if ((EEG.NumberOfChannelsAfterRejections^2)*(120/ms_per_sample))>EEG.pnts
+        EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA='yes';
+    else
+        EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA='no';
+    end
+    
+    if strcmp (EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA,'yes')
+        warning('Data may have been too short for valid ICA decomposition')
+    end
+    
+    EEG.RELAXProcessing_wICA.Proportion_artifactICs_reduced_by_wICA=mean(ICsMostLikelyNotBrain);
+    
+    if strcmp(Report_all_wICA_info,'Report_all_wICA_info')
+    
+        EEG.RELAXProcessing_wICA.ProportionICs_was_Brain=sum(I==1)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);
+        EEG.RELAXProcessing_wICA.ProportionICs_was_Muscle=sum(I==2)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);
+        EEG.RELAXProcessing_wICA.ProportionICs_was_Eye=sum(I==3)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);
+        EEG.RELAXProcessing_wICA.ProportionICs_was_Heart=sum(I==4)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);
+        EEG.RELAXProcessing_wICA.ProportionICs_was_LineNoise=sum(I==5)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);
+        EEG.RELAXProcessing_wICA.ProportionICs_was_ChannelNoise=sum(I==6)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);
+        EEG.RELAXProcessing_wICA.ProportionICs_was_Other=sum(I==7)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);    
+
+        ICsMostLikelyBrain=(I==1)';
+        ICsMostLikelyMuscle=(I==2)';
+        ICsMostLikelyEye=(I==3)';
+        ICsMostLikelyHeart=(I==4)';
+        ICsMostLikelyLineNoise=(I==5)';
+        ICsMostLikelyChannelNoise=(I==6)';
+        ICsMostLikelyOther=(I==7)';
+
+        for x=1:size(OUTEEG.etc.ic_classification.ICLabel.classifications,1)
+            [~, varianceWav(x)] =compvar(OUTEEG.data, OUTEEG.icaact, OUTEEG.icawinv, x);
+        end
+
+        BrainVariance=sum(abs(varianceWav(ICsMostLikelyBrain)));
+        ArtifactVariance=sum(abs(varianceWav(~ICsMostLikelyBrain)));
+        EEG.RELAXProcessing_wICA.ProportionVariance_was_BrainICs=(BrainVariance/(BrainVariance+ArtifactVariance));
+
+        MuscleVariance=sum(abs(varianceWav(ICsMostLikelyMuscle)));
+        EyeVariance=sum(abs(varianceWav(ICsMostLikelyEye)));
+        HeartVariance=sum(abs(varianceWav(ICsMostLikelyHeart)));
+        LineNoiseVariance=sum(abs(varianceWav(ICsMostLikelyLineNoise)));
+        ChannelNoiseVariance=sum(abs(varianceWav(ICsMostLikelyChannelNoise)));
+        OtherVariance=sum(abs(varianceWav(ICsMostLikelyOther)));
+
+        EEG.RELAXProcessing_wICA.ProportionVariance_was_MuscleICs=(MuscleVariance/(BrainVariance+ArtifactVariance));
+        EEG.RELAXProcessing_wICA.ProportionVariance_was_EyeICs=(EyeVariance/(BrainVariance+ArtifactVariance));
+        EEG.RELAXProcessing_wICA.ProportionVariance_was_HeartICs=(HeartVariance/(BrainVariance+ArtifactVariance));
+        EEG.RELAXProcessing_wICA.ProportionVariance_was_LineNoiseICs=(LineNoiseVariance/(BrainVariance+ArtifactVariance));
+        EEG.RELAXProcessing_wICA.ProportionVariance_was_ChannelNoiseICs=(ChannelNoiseVariance/(BrainVariance+ArtifactVariance));
+        EEG.RELAXProcessing_wICA.ProportionVariance_was_OtherICs=(OtherVariance/(BrainVariance+ArtifactVariance));
+    
+    end
     %% NWB addition ended
 
 end
