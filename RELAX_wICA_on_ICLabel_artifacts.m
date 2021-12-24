@@ -231,7 +231,7 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     %subtract out wavelet artifact signal from EEG signal
     wavcleanEEG=EEG2D-artifacts;
     EEG.data = wavcleanEEG;
-    EEG.RELAX.fastica_symm_Didnt_Converge=fastica_symm_Didnt_Converge; % Tracks whether fastica_symm showed convergence issues (1) or not (0), and how many non-convergences. If 3 non-convergences, then fastica_defl was implemented.
+    EEG.RELAXProcessing_wICA.fastica_symm_Didnt_Converge=fastica_symm_Didnt_Converge; % Tracks whether fastica_symm showed convergence issues (1) or not (0), and how many non-convergences. If 3 non-convergences, then fastica_defl was implemented.
     %% NWB addition ended
 
 end
