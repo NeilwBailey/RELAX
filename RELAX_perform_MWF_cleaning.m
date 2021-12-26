@@ -49,6 +49,7 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
         [warnmsg] = lastwarn;
         pattern = "eigenvectors";
         if contains(warnmsg,pattern)
+            warning(['Trying again with a shorter delay period.',[]]);
             clear warnmsg
             lastwarn('')
             [cleanEEG, d, W, SER, ARR] = mwf_process (EEG.data, EEG.RELAXProcessing.Details.NoiseMaskFullLength, (RELAX_cfg.MWFDelayPeriod-1));
@@ -56,6 +57,7 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
         end
         [warnmsg] = lastwarn;
         if contains(warnmsg,pattern)
+            warning(['Trying again with a shorter delay period.',[]]);
             clear warnmsg
             lastwarn('')
             [cleanEEG, d, W, SER, ARR] = mwf_process (EEG.data, EEG.RELAXProcessing.Details.NoiseMaskFullLength, (RELAX_cfg.MWFDelayPeriod-2));
@@ -63,6 +65,7 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
         end
         [warnmsg] = lastwarn;
         if contains(warnmsg,pattern)
+            warning(['Trying again with a shorter delay period.',[]]);
             clear warnmsg
             lastwarn('')
             [cleanEEG, d, W, SER, ARR] = mwf_process (EEG.data, EEG.RELAXProcessing.Details.NoiseMaskFullLength, (RELAX_cfg.MWFDelayPeriod-3));
