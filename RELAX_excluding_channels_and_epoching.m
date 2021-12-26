@@ -111,13 +111,13 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
     
     epochedEEG.RELAXProcessing.ExtremeDataBasedChannelToReject={}; % create empty cells for insertion into RELAX outputs table in case the following section is not performed
 
+    %% Detect voltage shift in Epoch to identify outlying channels:
     if YouCanRejectThisManyChannelsHere>0 
         if RELAX_cfg.ProbabilityDataHasNoBlinks<2
             % Mark blinks so the function is informed if an epoch contains
             % a blink (which will increase it's amplitude shift, but not
             % reflect an extreme artifact that should be deleted:
             [continuousEEG_initialblinkmarking, ~] = RELAX_blinks_IQR_method(continuousEEG, epochedEEG, RELAX_cfg);
-            %% Detect voltage shift in Epoch to identify outlying channels:
             % Eliminate non-blink triggers (just for this step) and order the event struct by latency
             BlinkShiftUpperBound=zeros(size(continuousEEG_initialblinkmarking.data,1),1);
             if isfield(continuousEEG_initialblinkmarking, 'RELAX')
@@ -130,15 +130,14 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
                         EEGEyeOnly = eeg_checkset( EEGEyeOnly );
                         % Compute blink affected epoch amplitude shifts and
                         % outlier threshold for blink affected epochs:
-                        BlinkPopAmplitudeShift=range(EEGEyeOnly.data(:,:,:),2);
-                        BlinkMedianAmplitudeShift=median(BlinkPopAmplitudeShift(:,:,:),3);
-                        BlinkMADAmplitudeShift=mad(BlinkPopAmplitudeShift(:,:,:),1,3);
+                        BlinkAmplitudeShiftWithinEachEpoch=range(EEGEyeOnly.data(:,:,:),2);
+                        BlinkMedianAmplitudeShift=median(BlinkAmplitudeShiftWithinEachEpoch(:,:,:),3);
+                        BlinkMADAmplitudeShift=mad(BlinkAmplitudeShiftWithinEachEpoch(:,:,:),1,3);
                         BlinkShiftUpperBound=BlinkMedianAmplitudeShift+(RELAX_cfg.ExtremeBlinkShiftThreshold*BlinkMADAmplitudeShift);
                     end
                 end
             end
         end
-
         % The following extracts both the (max - min) in the epoch for each
         % electrode, compares that absolute (max - min) voltage shift to all
         % other epochs for that electrode, and marks as an extreme outlier
@@ -146,7 +145,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         epochedEEG.RELAXProcessing.Details.popshiftmaskepochs=zeros;
         epochedEEG.RELAXProcessing.Details.popabsolutemaskepochs=zeros;
         epochedEEG.RELAXProcessing.Details.popmaskepochs=zeros;
-        PopAmplitudeShift=range(epochedEEG.data(:,:,:),2);        
+        AmplitudeShiftWithinEachEpoch=range(epochedEEG.data(:,:,:),2);        
         % The following is an alternative method to create an upper bound
         % that accounts for potential blinks, if the IQR blink detection
         % method has failed. It calculates the median and MAD of the 20%
@@ -155,17 +154,16 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         % epochs)
         if RELAX_cfg.ProbabilityDataHasNoBlinks<2
             if continuousEEG_initialblinkmarking.RELAX.IQRmethodDetectedBlinks~=1
-                ExtractingProbableBlinkAffectedEpochs=PopAmplitudeShift;
+                ExtractingProbableBlinkAffectedEpochs=AmplitudeShiftWithinEachEpoch;
                 ExtractingProbableBlinkAffectedEpochs(prctile(ExtractingProbableBlinkAffectedEpochs,80,3)>ExtractingProbableBlinkAffectedEpochs)=NaN;
                 ProbableBlinkMedians=median(ExtractingProbableBlinkAffectedEpochs,3,'omitnan');
                 ProbableBlinkMAD=mad(ExtractingProbableBlinkAffectedEpochs,1,3);
                 BlinkShiftUpperBound=ProbableBlinkMedians+(RELAX_cfg.ExtremeBlinkShiftThreshold*ProbableBlinkMAD);
             end
         end
-        
         % Obtain the median and MAD of all epoch amplitude shifts:
-        MedianAmplitudeShift=median(PopAmplitudeShift(:,:,:),3);
-        MADAmplitudeShift=mad(PopAmplitudeShift(:,:,:),1,3);
+        MedianAmplitudeShift=median(AmplitudeShiftWithinEachEpoch(:,:,:),3);
+        MADAmplitudeShift=mad(AmplitudeShiftWithinEachEpoch(:,:,:),1,3);
         % Use these values and user settings to establish the threshold:
         ShiftUpperBoundAllEpochs=MedianAmplitudeShift+(RELAX_cfg.ExtremeVoltageShiftThreshold*MADAmplitudeShift);
         if RELAX_cfg.ProbabilityDataHasNoBlinks<2
@@ -182,15 +180,15 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         % Mark epochs showing extreme data exceeding thresholds into the
         % template for each electrode:
         for epoch = 1:size(epochedEEG.data,3)
-            epochedEEG.RELAXProcessing.Details.ShiftInEpochToRejectChannels(PopAmplitudeShift(:,:,epoch)>ShiftUpperBound(:,1),epoch)=1;   
-            epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(PopAmplitudeShift(:,:,epoch)>ShiftUpperBound(:,1),epoch)=1;   
+            epochedEEG.RELAXProcessing.Details.ShiftInEpochToRejectChannels(AmplitudeShiftWithinEachEpoch(:,:,epoch)>ShiftUpperBound(:,1),epoch)=1;   
+            epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(AmplitudeShiftWithinEachEpoch(:,:,epoch)>ShiftUpperBound(:,1),epoch)=1;   
         end
         % If a channel doesn't show a voltage shift of more than 2 microvolts,
-        % mark as extreme (assumed to indicate no neural activity):
+        % mark as extreme outlier (assumed to indicate no neural activity):
         ShiftLowerBound=2*ones(size(epochedEEG.data,1),1);
         for epoch = 1:size(epochedEEG.data,3)
-            epochedEEG.RELAXProcessing.Details.FlatRejectChannels(PopAmplitudeShift(:,:,epoch)<ShiftLowerBound(:,1),epoch)=1; 
-            epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(PopAmplitudeShift(:,:,epoch)>ShiftUpperBound(:,1),epoch)=1;   
+            epochedEEG.RELAXProcessing.Details.FlatRejectChannels(AmplitudeShiftWithinEachEpoch(:,:,epoch)<ShiftLowerBound(:,1),epoch)=1; 
+            epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(AmplitudeShiftWithinEachEpoch(:,:,epoch)>ShiftUpperBound(:,1),epoch)=1;   
         end
 
         %% Absolute threshold to identify absolute amplitude extreme values:
@@ -210,7 +208,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
             epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(MinInEpoch(:,epoch)<-ExtremeAbsoluteVoltageThreshold(:,1),epoch)=1;
         end
 
-        %% Kurtosis to identify abnormally peaky or flat epochs and mark them in the extreme outlier template:
+        %% Kurtosis to identify epochs with abnormally peaky or flat distributions of voltage values and mark those epochs in the extreme outlier template:
         epochedEEG = pop_rejkurt(epochedEEG,1,(1:epochedEEG.nbchan),RELAX_cfg.ExtremeSingleChannelKurtosisThreshold,RELAX_cfg.ExtremeAllChannelKurtosisThreshold,0,0);
         epochedEEG.RELAXProcessing.Details.KurtosisRejectChannels=epochedEEG.reject.rejkurtE; % Extract just single electrode extreme artifact markings
         epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(epochedEEG.RELAXProcessing.Details.KurtosisRejectChannels==1)=1;
@@ -224,6 +222,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
 
         %% Test whether only drift is present for each channel in each epoch based on frequency slope:
         temp=eeglab2fieldtrip(epochedEEG, 'preprocessing');
+        % Set fieldtrip defaults:
         cfg              = [];
         cfg.output       = 'pow';
         cfg.channel      = {'all'};
@@ -255,7 +254,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         % If log-frequency log-power slope exceeds threshold (suggesting
         % only drift), then mark as artifact for each electrode/epoch
         Threshold = RELAX_cfg.ExtremeDriftSlopeThreshold*ones(size(epochedEEG.RELAXProcessing.Details.DriftRatioEpochsxChannels,1),1);
-        for epoch = 1:size(MaxInEpoch,2)
+        for epoch = 1:size(epochedEEG.RELAXProcessing.Details.DriftRatioEpochsxChannels,2)
             epochedEEG.RELAXProcessing.Details.driftslopeRejectChannels(epochedEEG.RELAXProcessing.Details.DriftRatioEpochsxChannels(:,epoch)<Threshold(:,1),epoch)=1;
             epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(epochedEEG.RELAXProcessing.Details.DriftRatioEpochsxChannels(:,epoch)<Threshold(:,1),epoch)=1;
         end
