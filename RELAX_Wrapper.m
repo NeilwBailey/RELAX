@@ -724,8 +724,8 @@ for Subjects=1:numel(RELAX_cfg.files)
                     CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX.Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
                 end
                 if isfield(EEG.RELAX.Metrics.Cleaned,'All_SER')
-                    CleanedMetrics.All_SER.(pipeline{pipe})(Subjects,1)=EEG.RELAX.Metrics.Cleaned.All_SER;
-                    CleanedMetrics.All_ARR.(pipeline{pipe})(Subjects,1)=EEG.RELAX.Metrics.Cleaned.All_ARR;
+                    CleanedMetrics.All_SER(Subjects)=EEG.RELAX.Metrics.Cleaned.All_SER;
+                    CleanedMetrics.All_ARR(Subjects)=EEG.RELAX.Metrics.Cleaned.All_ARR;
                 end
             end
             if isfield(EEG.RELAX.Metrics, 'Raw')
