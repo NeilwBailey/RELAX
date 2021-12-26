@@ -179,8 +179,8 @@ RELAX_cfg.Do_MWF_Twice=1; % 1 = Perform the MWF cleaning a second time (1 for ye
 RELAX_cfg.Do_MWF_Thrice=1; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no). I think cleaning drift in this is a good idea.
 RELAX_cfg.Perform_wICA_on_ICLabel=1; % 1 = Perform wICA on artifact components marked by ICLabel (1 for yes, 0 for no).
 
-RELAX_cfg.computerawmetrics=1;
-RELAX_cfg.computecleanedmetrics=1;
+RELAX_cfg.computerawmetrics=1; % Compute blink and muscle metrics from the raw data?
+RELAX_cfg.computecleanedmetrics=1; % Compute SER, ARR, blink and muscle metrics from the cleaned data?
 
 RELAX_cfg.MWFRoundToCleanBlinks=2; % Which round to clean blinks in (1 for the first, 2 for the second...)
 RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 1 = data might not have blinks, 2 = data definitely doesn't have blinks.
@@ -189,21 +189,8 @@ RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 
 % 2 = eg. eyes closed resting with highly compliant participants and recordings that were strictly made only when participants had their eyes closed.
 
 RELAX_cfg.DriftSeverityThreshold=10; %MAD from the median of all electrodes. This could be set lower and would catch less severe drift 
-RELAX_cfg.PercentWorstEpochsForDrift=0.30; % Maximum percent of epochs to include in the mask from drift artifact type.
+RELAX_cfg.ProportionWorstEpochsForDrift=0.30; % Maximum proportion of epochs to include in the mask from drift artifact type.
 
-RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
-% Delay periods >5 can lead to generalised eigenvector rank deficiency in some files, 
-% and if this occurs cleaning is ineffective. 5 was used by Somers et al (2018). 
-% This is likely to be because data filtering creates a temporal
-% dependency between consecutive datapoints, reducing their independence
-% when including the temporal aspect in the MWF computation.
-% To address this, I have set the MWF function to attempt MWF cleaning
-% at the delay period set above, but if rank deficiency occurs, to reduce
-% the delay period by 1 and try again (for 3 iterations).
-% Using robust detrending (which does not create any temporal dependence,
-% unlike filtering) may be an alternative which avoids rank deficiency 
-% (but our initial test suggested this led to worse cleaning than filtering).
-  
 RELAX_cfg.ExtremeVoltageShiftThreshold=20; % How many MAD from the median of all epochs for each electrode against itself. This could be set lower and would catch less severe pops
 RELAX_cfg.ExtremeAbsoluteVoltageThreshold=500; % microvolts max or min above which will be excluded from cleaning and deleted from data
 RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=8; % SD from the mean of all epochs for each electrode against itself. This could be set lower and would catch less severe improbable data
@@ -253,10 +240,12 @@ RELAX_cfg.saveround3=0; % setting this value to 1 tells the script to save the t
 RELAX_cfg.OnlyIncludeTaskRelatedEpochs=0; % If this =1, the MWF clean and artifact templates will only include data within 5 seconds of a task trigger (other periods will be marked as NaN, which the MWF script ignores).
 
 RELAX_cfg.MuscleSlopeThreshold=-0.59; %log-frequency log-power slope threshold for muscle artifact. Less stringent = -0.31, Middle Stringency = -0.59 or more stringent = -0.72, more negative thresholds remove more muscle.
-RELAX_cfg.PercentWorstEpochsForMuscle=0.50;  % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
+RELAX_cfg.ProportionWorstEpochsForMuscle=0.50;  % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
 % I set this reasonably high, because otherwise muscle artifacts could considerably influence the clean mask and add noise into the data
 RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing muscle activity is higher than this, the electrode is deleted
 RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing extreme artifacts is higher than this, the electrode is deleted
+
+RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
 
 %% Notes on the above parameter settings:
 % OnlyIncludeTaskRelatedEpochs: this means the MWF cleaning templates 
@@ -289,6 +278,22 @@ RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the propo
 % (-0.72 is the maximum of the histogram of the paralysed IC data, so
 % excluding more positive values than this will exclude most of the EMG
 % data, but also some brain data).
+
+% Delay periods >5 can lead to generalised eigenvector rank deficiency
+% in some files, and if this occurs cleaning is ineffective. Delay
+% period = 5 was used by Somers et al (2018). The rank deficiency is
+% likely to be because data filtering creates a temporal
+% dependency between consecutive datapoints, reducing their
+% independence when including the temporal aspect in the MWF
+% computation. To address this, the MWF function attempts MWF cleaning
+% at the delay period set above, but if rank deficiency occurs,
+% it reduces the delay period by 1 and try again (for 3
+% iterations).
+
+% Using robust detrending (which does not create any temporal
+% dependence,unlike filtering) may be an alternative which avoids rank
+% deficiency (but our initial test suggested this led to worse cleaning
+% than filtering)
 
 % Fitzgibbon, S. P., DeLosAngeles, D., Lewis, T. W., Powers, D. M. W., Grummett, T. S., Whitham, E. M., ... & Pope, K. J. (2016). Automatic determination of EMG-contaminated components and validation of independent component analysis using EEG during pharmacologic paralysis. Clinical Neurophysiology, 127(3), 1781-1793.
 
@@ -459,19 +464,14 @@ for Subjects=1:numel(RELAX_cfg.files)
             EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
         end
 
-        % Combine the extreme period mask NaNs into the full noise mask, so
-        % these periods are ignored by the MWF cleaning template when
-        % constructing an artifact and clean period mask.
-        for e=1:size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2)
-            if isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods(1,e))
-                EEG.RELAXProcessing.Details.NoiseMaskFullLength(1,e)=NaN;
-            end
-        end
-        
         % The following pads very brief lengths of mask periods
         % in the template (without doing this, very short periods can
-        % lead to rank deficiency):
+        % lead to rank deficiency), and excludes extreme artifacts from the
+        % cleaning template (so the MWF cleaning step just ignores extreme
+        % artifacts in it's template - doesn't include them in either the
+        % clean or artifact mask, but does apply cleaning to them).
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks'); % If period has been marked as shorter than RELAX_cfg.MinimumArtifactDuration, then pad it out.
+        
         EEG.RELAX.NoiseMaskFullLengthR1=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
         EEG.RELAXProcessing.ProportionMarkedAllArtifacts=nanmean(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
         EEG.RELAX.ProportionMarkedAllArtifactsR1=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
@@ -537,18 +537,12 @@ for Subjects=1:numel(RELAX_cfg.files)
             end
         end
   
-        % Combine the extreme period mask NaNs into the full noise mask, so
-        % these periods are ignored by the MWF cleaning template when
-        % constructing an artifact and clean period mask.
-        for e=1:size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2)
-            if isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods(1,e))
-                EEG.RELAXProcessing.Details.NoiseMaskFullLength(1,e)=NaN;
-            end
-        end
-        
         % The following pads very brief lengths of mask periods
         % in the template (without doing this, very short periods can
-        % lead to rank deficiency): 
+        % lead to rank deficiency), and excludes extreme artifacts from the
+        % cleaning template (so the MWF cleaning step just ignores extreme
+        % artifacts in it's template - doesn't include them in either the
+        % clean or artifact mask, but does apply cleaning to them).
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'blinks');
         
         EEG.RELAX.NoiseMaskFullLengthR2=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
@@ -626,19 +620,13 @@ for Subjects=1:numel(RELAX_cfg.files)
             EEG.RELAX.eyeblinkmask(isnan(EEG.RELAXProcessing.Details.NaNsForNonEvents))=NaN;
             EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
         end
-        
-        % Combine the extreme period mask NaNs into the full noise mask, so
-        % these periods are ignored by the MWF cleaning template when
-        % constructing an artifact and clean period mask.
-        for e=1:size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2)
-            if isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods(1,e))
-                EEG.RELAXProcessing.Details.NoiseMaskFullLength(1,e)=NaN;
-            end
-        end
-        
+ 
         % The following pads very brief lengths of mask periods
         % in the template (without doing this, very short periods can
-        % lead to rank deficiency): 
+        % lead to rank deficiency), and excludes extreme artifacts from the
+        % cleaning template (so the MWF cleaning step just ignores extreme
+        % artifacts in it's template - doesn't include them in either the
+        % clean or artifact mask, but does apply cleaning to them).
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks');
         
         EEG.RELAX.NoiseMaskFullLengthR3=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
