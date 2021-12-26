@@ -61,14 +61,15 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     wavename=varargin{6}; else wavename='coif5';end
 
     if nargin>7 && ~isempty(varargin{7})
-    Report_all_wICA_info=varargin{7}; 
-    else Report_all_wICA_info='off';end % NWB addition to optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category ('Report_all_wICA_info' if on)
+        Report_all_wICA_info=varargin{7}; 
+    else Report_all_wICA_info='off';
+    end % NWB addition to optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category ('Report_all_wICA_info' if on)
 
     fastica_symm_Didnt_Converge=[0 0 0]; % NWB addition to track whether fastica_symm doesn't converge
 
     % run ICA using "runica" or "radical"
     if strcmp(type,'runica')
-        [OUTEEG, com] = pop_runica(EEG, 'extended',1,'interupt','on'); %runica for parametric, default extended for finding subgaussian distributions
+        [OUTEEG, ~] = pop_runica(EEG, 'extended',1,'interupt','on'); %runica for parametric, default extended for finding subgaussian distributions
         W = OUTEEG.icaweights*OUTEEG.icasphere;
         A = inv(W);
         %% NWB added section to ensure ICA details are updated in EEGLAB struct
@@ -86,7 +87,7 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
         A = inv(W);
         %% NWB added section to enable cudaICA / fastICA to be used as an ICA option to enable quicker ICA computation, or AMICA for theoretically optimal performance
     elseif strcmp(type,'cudaica')
-        [OUTEEG, com] = pop_runica(EEG, 'cudaica', 'extended',1); %runica for parametric, default extended for finding subgaussian distributions
+        [OUTEEG, ~] = pop_runica(EEG, 'cudaica', 'extended',1); %runica for parametric, default extended for finding subgaussian distributions
         W = OUTEEG.icaweights*OUTEEG.icasphere;
         A = inv(W);
         OUTEEG = eeg_checkset(OUTEEG, 'ica'); 
@@ -102,15 +103,14 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
         % the case of non-convergence, then switches to fastica_defl to
         % ensure ICA convergence (as cleaning as adversely affected by
         % non-convergence issues).
-         NonConvergence=0;
-         [OUTEEG com NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
+         [OUTEEG, ~, NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
          fastica_symm_Didnt_Converge(1,1)=NonConvergence;
          if NonConvergence==1
-             [OUTEEG com NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
+             [OUTEEG, ~, NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
              fastica_symm_Didnt_Converge(1,2)=NonConvergence;
          end
          if NonConvergence==1
-             [OUTEEG com NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
+             [OUTEEG, ~, NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
              fastica_symm_Didnt_Converge(1,3)=NonConvergence;
          end
          if NonConvergence==1
@@ -150,7 +150,7 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
         num_models = 1;     % # of models of mixture ICA 
         max_iter = 2000;    % max number of learning steps 
         mkdir('D:\Data\AMICAtmp');
-        outdir = [ 'D:\Data\AMICAtmp\' ];
+        outdir = 'D:\Data\AMICAtmp\';
         % Run AMICA:    
         [OUTEEG.icaweights, OUTEEG.icasphere, ~] = runamica15(OUTEEG.data, 'num_chans', EEG.nbchan, 'num_models',num_models,'outdir',outdir,'numprocs', numprocs, 'max_threads', max_threads, 'max_iter',max_iter,'pcakeep', EEG.nbchan, 'do_reject', 1, 'numrej', 15, 'rejsig', 3, 'rejint', 1);
         W = OUTEEG.icaweights*OUTEEG.icasphere;

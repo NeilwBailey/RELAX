@@ -65,7 +65,6 @@ function [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, ep
     if size(BlinkRunIndex,2)>0
         continuousEEG.RELAX.IQRmethodDetectedBlinks=1;
         epochedEEG.RELAX.IQRmethodDetectedBlinks=1;
-        EEGeventlength=length(EEG.event);
         for x=1:size(BlinkRunIndex,2)-1
             o=bi(BlinkRunIndex(x));
             c=bi(BlinkRunIndex(x)+1);

@@ -47,7 +47,7 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
         % If Generalized eigenvectors are not scaled as assumed, try again
         % with a shorter delay period, up to 3 times:
         [warnmsg] = lastwarn;
-        pattern = ["eigenvectors"];
+        pattern = "eigenvectors";
         if contains(warnmsg,pattern)
             clear warnmsg
             lastwarn('')
@@ -78,7 +78,7 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
 
         % Check for rank deficiency and note the issue if there is an issue:
         [warnmsg] = lastwarn;
-        pattern = ["eigenvectors"];
+        pattern = "eigenvectors";
         if contains(warnmsg,pattern)
             EEG.RELAXProcessing.RankDeficiency=warnmsg;
         end

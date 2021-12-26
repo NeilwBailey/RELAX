@@ -314,7 +314,7 @@ RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal informa
 tic;
 
 RELAX_cfg.OutputPath=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep];   % use fileseparators for increased compatability 
-if ~exist([RELAX_cfg.OutputPath, 'dir']); mkdir(RELAX_cfg.OutputPath); end % make dir if non-existant 
+if ~exist(RELAX_cfg.OutputPath, 'dir'); mkdir(RELAX_cfg.OutputPath); end % make dir if not present
 
 cd(RELAX_cfg.OutputPath);
 dirList=dir('*.mat');
