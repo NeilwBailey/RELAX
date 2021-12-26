@@ -141,10 +141,7 @@ function [continuousEEG, epochedEEG] = RELAX_drift(continuousEEG, epochedEEG, RE
             end
         end  
     end
-
-    epochedEEG.RELAXProcessing.ProportionMarkedAsDrift=mean(epochedEEG.RELAXProcessing.Details.driftmaskepochs,'omitnan');
     epochedEEG.RELAXProcessing.Details.justdriftmask=epochedEEG.RELAXProcessing.Details.NaNsForNonEvents;
-    
     % Add drift epoch marks to overall noise mask:
     for e=1:size(epochedEEG.RELAXProcessing.Details.driftmaskepochs,2)
         if epochedEEG.RELAXProcessing.Details.driftmaskepochs(1,e)==1
@@ -152,7 +149,7 @@ function [continuousEEG, epochedEEG] = RELAX_drift(continuousEEG, epochedEEG, RE
             epochedEEG.RELAXProcessing.Details.justdriftmask(epochedEEG.event(e).originallatency:epochedEEG.event(e).originallatency+(round(1000/RELAX_cfg.ms_per_sample)-1))=OneSecondOf1s;
         end
     end
-    
+    epochedEEG.RELAXProcessing.ProportionMarkedAsDrift=mean(epochedEEG.RELAXProcessing.Details.justdriftmask,'omitnan');
     continuousEEG.RELAXProcessing=epochedEEG.RELAXProcessing;
     if isfield(epochedEEG, 'RELAX')==1
         continuousEEG.RELAX=epochedEEG.RELAX;
