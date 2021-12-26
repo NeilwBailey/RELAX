@@ -778,7 +778,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     save(savefileone,'RELAX_cfg')
 end
 
-clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants'...
+clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'NoBlinksDetected' 'Warning';
     
 if exist('CleanedMetrics','var')
