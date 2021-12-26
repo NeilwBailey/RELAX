@@ -245,7 +245,7 @@ RELAX_cfg.saveround3=0; % setting this value to 1 tells the script to save the t
 RELAX_cfg.OnlyIncludeTaskRelatedEpochs=0; % If this =1, the MWF clean and artifact templates will only include data within 5 seconds of a task trigger (other periods will be marked as NaN, which the MWF script ignores).
 
 RELAX_cfg.MuscleSlopeThreshold=-0.59; %log-frequency log-power slope threshold for muscle artifact. Less stringent = -0.31, Middle Stringency = -0.59 or more stringent = -0.72, more negative thresholds remove more muscle.
-RELAX_cfg.ProportionWorstEpochsForMuscle=0.50;  % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
+RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50;  % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
 % I set this reasonably high, because otherwise muscle artifacts could considerably influence the clean mask and add noise into the data
 RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing muscle activity is higher than this, the electrode is deleted
 RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing extreme artifacts is higher than this, the electrode is deleted
@@ -468,7 +468,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         if RELAX_cfg.MWFRoundToCleanBlinks==1
             EEG.RELAXProcessing.Details.NoiseMaskFullLength(EEG.RELAX.eyeblinkmask==1)=1;
             EEG.RELAX.eyeblinkmask(isnan(EEG.RELAXProcessing.Details.NaNsForNonEvents))=NaN;
-            EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
+            EEG.RELAXProcessing.ProportionMarkedBlinks=mean(EEG.RELAX.eyeblinkmask,'omitnan');
         end
 
         % The following pads very brief lengths of mask periods
@@ -480,7 +480,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks'); % If period has been marked as shorter than RELAX_cfg.MinimumArtifactDuration, then pad it out.
         
         EEG.RELAX.NoiseMaskFullLengthR1=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
-        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=nanmean(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
+        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
         EEG.RELAX.ProportionMarkedAllArtifactsR1=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
               
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
@@ -540,7 +540,7 @@ for Subjects=1:numel(RELAX_cfg.files)
             if RELAX_cfg.MWFRoundToCleanBlinks==2
                 EEG.RELAXProcessing.Details.NoiseMaskFullLength(EEG.RELAX.eyeblinkmask==1)=1;
                 EEG.RELAX.eyeblinkmask(isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods))=NaN;
-                EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
+                EEG.RELAXProcessing.ProportionMarkedBlinks=mean(EEG.RELAX.eyeblinkmask,'omitnan');
             end
         end
   
@@ -553,7 +553,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'blinks');
         
         EEG.RELAX.NoiseMaskFullLengthR2=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
-        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=nanmean(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
+        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
         EEG.RELAX.ProportionMarkedAllArtifactsR2=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
 
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
@@ -591,7 +591,7 @@ for Subjects=1:numel(RELAX_cfg.files)
             if isfield(EEG.RELAX, 'eyeblinkmask')
                 EEG.RELAXProcessing.Details.NoiseMaskFullLength(EEG.RELAX.eyeblinkmask==1)=1;
                 EEG.RELAX.eyeblinkmask(isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods))=NaN;
-                EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
+                EEG.RELAXProcessing.ProportionMarkedBlinks=mean(EEG.RELAX.eyeblinkmask,'omitnan');
             end
         end
 
@@ -625,7 +625,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         if RELAX_cfg.MWFRoundToCleanBlinks==3
             EEG.RELAXProcessing.Details.NoiseMaskFullLength(EEG.RELAX.eyeblinkmask==1)=1;
             EEG.RELAX.eyeblinkmask(isnan(EEG.RELAXProcessing.Details.NaNsForNonEvents))=NaN;
-            EEG.RELAXProcessing.ProportionMarkedBlinks=nanmean(EEG.RELAX.eyeblinkmask);
+            EEG.RELAXProcessing.ProportionMarkedBlinks=mean(EEG.RELAX.eyeblinkmask,'omitnan');
         end
  
         % The following pads very brief lengths of mask periods
@@ -637,7 +637,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks');
         
         EEG.RELAX.NoiseMaskFullLengthR3=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
-        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=nanmean(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
+        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
         EEG.RELAX.ProportionMarkedAllArtifactsR3=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
 
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:

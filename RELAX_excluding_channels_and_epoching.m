@@ -66,7 +66,6 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
     % functions:
     continuousEEG.RELAXProcessing.Details.NaNsForNonEventsAllChannels=NaN(size(continuousEEG.data));
     continuousEEG.RELAXProcessing.Details.NaNsForNonEvents=NaN(1,size(continuousEEG.data,2));
-    OneSecondOfNaNs=NaN(1,(round(1000/RELAX_cfg.ms_per_sample)));
     OneSecondOf1s=ones(1,(round(1000/RELAX_cfg.ms_per_sample)));
     OneSecondOf0sAllChannels=zeros((size(continuousEEG.data,1)),round(1000/RELAX_cfg.ms_per_sample)); 
     OneSecondOf0s=zeros(1,(round(1000/RELAX_cfg.ms_per_sample)));
@@ -142,9 +141,6 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         % electrode, compares that absolute (max - min) voltage shift to all
         % other epochs for that electrode, and marks as an extreme outlier
         % voltage epochs with shifts more than the threshold:
-        epochedEEG.RELAXProcessing.Details.popshiftmaskepochs=zeros;
-        epochedEEG.RELAXProcessing.Details.popabsolutemaskepochs=zeros;
-        epochedEEG.RELAXProcessing.Details.popmaskepochs=zeros;
         AmplitudeShiftWithinEachEpoch=range(epochedEEG.data(:,:,:),2);        
         % The following is an alternative method to create an upper bound
         % that accounts for potential blinks, if the IQR blink detection

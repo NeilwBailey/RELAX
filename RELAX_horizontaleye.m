@@ -1,13 +1,13 @@
 function [continuousEEG] = RELAX_horizontaleye(continuousEEG, RELAX_cfg)
 
-% This function marks periods that show lateral electrode amplitude shifts
-% of more than the MAD threshold in the opposite direction on the opposite side of the
-% head as a horizontal eye movement (adapted from TESA [Rogasch et al.
-% 2018], which uses SD instead of MAD). You may not want to include this in
-% your mask if your task requires participants to focus straight ahead (and
-% may instead like to reject epochs showing horizontal eye movements altogether)
+    % This function marks periods that show lateral electrode amplitude shifts
+    % of more than the MAD threshold in the opposite direction on the opposite side of the
+    % head as a horizontal eye movement (adapted from TESA [Rogasch et al.
+    % 2018], which uses SD instead of MAD). You may not want to include this in
+    % your mask if your task requires participants to focus straight ahead (and
+    % may instead like to reject epochs showing horizontal eye movements altogether)
 
-    % set some defaults for included channels and trials, if not specified
+    % set some defaults if not specified
     if exist('RELAX_cfg', 'var')==1
         if isfield(RELAX_cfg, 'OnlyIncludeTaskRelatedEpochs')==0
             RELAX_cfg.OnlyIncludeTaskRelatedEpochs=0; % If this =1, the clean and artifact templates will only include data within 5 seconds of a task trigger, periods outside this will be marked as NaN.
@@ -222,7 +222,7 @@ function [continuousEEG] = RELAX_horizontaleye(continuousEEG, RELAX_cfg)
 
             % MAD method:
             if RELAX_cfg.HorizontalEyeMovementType==2% 1 to use the IQR method, 2 to use the MAD method for identifying threshold
-                    % Work out the median voltage for the HEOG affected electrodes, and
+                % Work out the median voltage for the HEOG affected electrodes, and
                 % calculate +/- X MAD from the median
                 continuousEEG.RELAXProcessing.Details.HEOGLeftMedian = median(continuousEEG.data(LeftHEyeLocation,:));
                 continuousEEG.RELAXProcessing.Details.LeftMAD = mad(continuousEEG.data(LeftHEyeLocation,:));   
@@ -281,5 +281,5 @@ function [continuousEEG] = RELAX_horizontaleye(continuousEEG, RELAX_cfg)
             end
         end
         % Calculate proportion of HEOG affected data:
-        continuousEEG.RELAXProcessing.ProportionMarkedFromHEOG=nanmean(continuousEEG.RELAXProcessing.Details.horizontaleyemask);
+        continuousEEG.RELAXProcessing.ProportionMarkedFromHEOG=mean(continuousEEG.RELAXProcessing.Details.horizontaleyemask,'omitnan');
 end
