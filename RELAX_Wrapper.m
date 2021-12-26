@@ -191,14 +191,19 @@ RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 
 RELAX_cfg.DriftSeverityThreshold=10; %MAD from the median of all electrodes. This could be set lower and would catch less severe drift 
 RELAX_cfg.ProportionWorstEpochsForDrift=0.30; % Maximum proportion of epochs to include in the mask from drift artifact type.
 
-RELAX_cfg.ExtremeVoltageShiftThreshold=20; % How many MAD from the median of all epochs for each electrode against itself. This could be set lower and would catch less severe pops
+RELAX_cfg.ExtremeVoltageShiftThreshold=20; % Threshold MAD from the median all epochs for each electrode against the same electrode in different epochs. This could be set lower and would catch less severe voltage shifts within the epoch
 RELAX_cfg.ExtremeAbsoluteVoltageThreshold=500; % microvolts max or min above which will be excluded from cleaning and deleted from data
-RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=8; % SD from the mean of all epochs for each electrode against itself. This could be set lower and would catch less severe improbable data
-RELAX_cfg.ExtremeSingleChannelKurtosisThreshold=8; % SD from the mean of the single electrodes. This could be set lower and would catch less severe kurtosis 
-RELAX_cfg.ExtremeAllChannelKurtosisThreshold=8; % SD from the mean of all electrodes. This could be set lower and would catch less severe kurtosis 
-RELAX_cfg.ExtremeBlinkShiftThreshold=8; % How many MAD from the median of blink affected epochs to exclude as extreme data (uses the higher value out of this value and RELAX_cfg.PopSeverityShiftThreshold above, which caters for the fact that blinks don't affect the median, so without this, if data is clean and blinks are large, blinks can get excluded as extreme
+RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=8; % Threshold SD from the mean of all epochs for each electrode against the same electrode in different epochs. This could be set lower and would catch less severe improbable data
+RELAX_cfg.ExtremeSingleChannelKurtosisThreshold=8; % Threshold kurtosis of each electrode against the same electrode in different epochs. This could be set lower and would catch less severe kurtosis 
+RELAX_cfg.ExtremeAllChannelKurtosisThreshold=8; % Threshold kurtosis across all electrodes. This could be set lower and would catch less severe kurtosis
 RELAX_cfg.ExtremeDriftSlopeThreshold=-4; % slope of log frequency log power below which to reject as drift without neural activity
-
+RELAX_cfg.ExtremeBlinkShiftThreshold=8; % How many MAD from the median across blink affected epochs to exclude as extreme data 
+% (applies the higher value out of this value and the
+% RELAX_cfg.ExtremeVoltageShiftThreshold above as the
+% threshold, which caters for the fact that blinks don't affect
+% the median, so without this, if data is clean and blinks are
+% large, blinks can get excluded as extreme outliers)
+            
 % Clean periods that last for a shorter duration than the following value to be marked as artifacts, 
 % and pad short artifact periods out into artifact periods of at least the following length when 
 % they are shorter than this value to reduce rank deficiency issues in MWF cleaning). 
@@ -245,6 +250,8 @@ RELAX_cfg.ProportionWorstEpochsForMuscle=0.50;  % Maximum amount of data periods
 RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing muscle activity is higher than this, the electrode is deleted
 RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing extreme artifacts is higher than this, the electrode is deleted
 
+RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
+
 RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
 
 %% Notes on the above parameter settings:
@@ -265,20 +272,6 @@ RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal informa
 % artifact template). This would prevent the ERP activity of interest from
 % being included in the artifact tempalte (and potentially cleaned)
 
-% MuscleSlopeThreshold: (-0.31 = data from paralysed participants showed no
-% independent components with a slope value more positive than this (so
-% excluding slopes above this threshold means only excluding data that we
-% know must be influenced by EMG). Using -0.31 as the threshold means
-% possibly leaving low level EMG data in, and only eliminating the data we
-% know is definitely EMG)
-% (-0.59 is where the histograms between paralysed ICs and EMG ICs cross,
-% so above this value contains a very small amount of the brain data, 
-% and over 50% of the EMG data. Above this point, data is more likely to be
-% EMG than brain)
-% (-0.72 is the maximum of the histogram of the paralysed IC data, so
-% excluding more positive values than this will exclude most of the EMG
-% data, but also some brain data).
-
 % Delay periods >5 can lead to generalised eigenvector rank deficiency
 % in some files, and if this occurs cleaning is ineffective. Delay
 % period = 5 was used by Somers et al (2018). The rank deficiency is
@@ -294,6 +287,20 @@ RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal informa
 % dependence,unlike filtering) may be an alternative which avoids rank
 % deficiency (but our initial test suggested this led to worse cleaning
 % than filtering)
+
+% MuscleSlopeThreshold: (-0.31 = data from paralysed participants showed no
+% independent components with a slope value more positive than this (so
+% excluding slopes above this threshold means only excluding data that we
+% know must be influenced by EMG). Using -0.31 as the threshold means
+% possibly leaving low level EMG data in, and only eliminating the data we
+% know is definitely EMG)
+% (-0.59 is where the histograms between paralysed ICs and EMG ICs cross,
+% so above this value contains a very small amount of the brain data, 
+% and over 50% of the EMG data. Above this point, data is more likely to be
+% EMG than brain)
+% (-0.72 is the maximum of the histogram of the paralysed IC data, so
+% excluding more positive values than this will exclude most of the EMG
+% data, but also some brain data).
 
 % Fitzgibbon, S. P., DeLosAngeles, D., Lewis, T. W., Powers, D. M. W., Grummett, T. S., Whitham, E. M., ... & Pope, K. J. (2016). Automatic determination of EMG-contaminated components and validation of independent component analysis using EEG during pharmacologic paralysis. Clinical Neurophysiology, 127(3), 1781-1793.
 
