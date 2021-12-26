@@ -354,7 +354,7 @@ end
 %% Loop over each file in the directory list 
 for Subjects=1:numel(RELAX_cfg.files)
     RELAX_cfg.filename=RELAX_cfg.files{Subjects};
-    clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants'...
+    clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'NoBlinksDetected' 'Warning';
     %% Load data (assuming the data is in EEGLAB .set format):
     
@@ -444,7 +444,9 @@ for Subjects=1:numel(RELAX_cfg.files)
     rawEEG=continuousEEG; % Take a copy of the not yet cleaned data for calculation of all cleaning SER and ARR at the end
     
     if RELAX_cfg.saveextremesrejected==1
-        mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected'])
+        if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected'], 'dir')
+            mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected'])
+        end
         SaveSetExtremes_Rejected =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected', filesep ParticipantID '_Extremes_Rejected.set'];    
         EEG = pop_saveset( rawEEG, SaveSetExtremes_Rejected ); % If desired, save data here with bad channels deleted, filtering applied, extreme outlying data periods marked
     end
@@ -503,7 +505,9 @@ for Subjects=1:numel(RELAX_cfg.files)
         EEG = rmfield(EEG,'RELAXProcessing');
         % Save round 1 MWF pre-processing:
         if RELAX_cfg.saveround1==1
-            mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF'])
+            if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF'], 'dir')
+                mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF'])
+            end
             SaveSetMWF1 =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF', filesep ParticipantID '_MWF1.set'];    
             EEG = pop_saveset( EEG, SaveSetMWF1 ); 
         end
@@ -574,7 +578,9 @@ for Subjects=1:numel(RELAX_cfg.files)
         EEG = rmfield(EEG,'RELAXProcessing');
         % Save round 2 MWF pre-processing:
         if RELAX_cfg.saveround2==1
-            mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF'])
+            if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF'], 'dir')
+                mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF'])
+            end
             SaveSetMWF2 =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF', filesep ParticipantID '_MWF2.set'];    
             EEG = pop_saveset( EEG, SaveSetMWF2 ); 
         end     
@@ -659,7 +665,9 @@ for Subjects=1:numel(RELAX_cfg.files)
         EEG = rmfield(EEG,'RELAXProcessing');
 
         if RELAX_cfg.saveround3==1
-            mkdir([RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep '3xMWF'])
+            if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '3xMWF'], 'dir')
+                mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '3xMWF'])
+            end
             SaveSetMWF3 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep '3xMWF', filesep ParticipantID '_MWF3.set'];    
             EEG = pop_saveset( EEG, SaveSetMWF3 ); 
         end         
@@ -743,8 +751,9 @@ for Subjects=1:numel(RELAX_cfg.files)
     end
     
     %% SAVE FILE:
-    
-    mkdir([RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data'])
+    if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'], 'dir')
+        mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'])
+    end
     SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep ParticipantID '_RELAX.set'];    
     EEG = pop_saveset( EEG, SaveSetMWF2 );  
     
