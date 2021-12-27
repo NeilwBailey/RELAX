@@ -355,7 +355,7 @@ end
 for Subjects=1:numel(RELAX_cfg.files)
     RELAX_cfg.filename=RELAX_cfg.files{Subjects};
     clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
-        'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'NoBlinksDetected' 'Warning';
+        'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
     %% Load data (assuming the data is in EEGLAB .set format):
     
     cd(RELAX_cfg.myPath);
@@ -363,6 +363,7 @@ for Subjects=1:numel(RELAX_cfg.files)
 
     ParticipantID = extractBefore(RELAX_cfg.filename,".");
     EEG.RELAXProcessing.aParticipantID=cellstr(ParticipantID);
+    EEG.RELAXProcessingExtremeRejections.aParticipantID=cellstr(ParticipantID);
     
     EEG.RELAX.Data_has_been_averagerereferenced=0;
     EEG.RELAX.Data_has_been_cleaned=0;
@@ -415,10 +416,10 @@ for Subjects=1:numel(RELAX_cfg.files)
     %% Clean flat channels and bad channels showing improbable data:
     % PREP pipeline: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4471356/
     noisyOut = findNoisyChannels(EEG);  
-    EEG.RELAXProcessing.PREPBasedChannelToReject={};
+    EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject={};
     for x=1:size(noisyOut.noisyChannels.all,2) % loop through output of PREP's findNoisyChannels and take a record of noisy electrodes for deletion:
         PREPBasedChannelToReject{x}=EEG.chanlocs(noisyOut.noisyChannels.all(x)).labels;
-        EEG.RELAXProcessing.PREPBasedChannelToReject = PREPBasedChannelToReject';
+        EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject = PREPBasedChannelToReject';
     end
     EEG=pop_select(EEG,'nochannel',noisyOut.noisyChannels.all); % delete noisy electrodes detected by PREP
     EEG.RELAX.ListOfChannelsAfterRejections={EEG.chanlocs.labels}; % Get list of good channels
@@ -440,6 +441,9 @@ for Subjects=1:numel(RELAX_cfg.files)
         [continuousEEG, epochedEEG] = RELAX_metrics_blinks(continuousEEG, epochedEEG); % record blink amplitude ratio from raw data for comparison.
         end
     end
+
+    % Record extreme artifact rejection details for all participants in single table:
+    RELAXProcessingExtremeRejectionsAllParticipants(Subjects,:) = struct2table(epochedEEG.RELAXProcessingExtremeRejections,'AsArray',true);
     
     rawEEG=continuousEEG; % Take a copy of the not yet cleaned data for calculation of all cleaning SER and ARR at the end
     
@@ -482,8 +486,8 @@ for Subjects=1:numel(RELAX_cfg.files)
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks'); % If period has been marked as shorter than RELAX_cfg.MinimumArtifactDuration, then pad it out.
         
         EEG.RELAX.NoiseMaskFullLengthR1=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
-        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
-        EEG.RELAX.ProportionMarkedAllArtifactsR1=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
+        EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
+        EEG.RELAX.ProportionMarkedInMWFArtifactMaskTotalR1=EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal; 
               
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);          
@@ -557,8 +561,8 @@ for Subjects=1:numel(RELAX_cfg.files)
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'blinks');
         
         EEG.RELAX.NoiseMaskFullLengthR2=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
-        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
-        EEG.RELAX.ProportionMarkedAllArtifactsR2=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
+        EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
+        EEG.RELAX.ProportionMarkedInMWFArtifactMaskTotalR2=EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal; 
 
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);           
@@ -593,7 +597,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         EEG.RELAXProcessing.ProportionMarkedBlinks=0;
         % If less than 5% of data was masked as eye blink cleaning in second round MWF, then insert
         % eye blink mask into noise mask in round 3:
-        if EEG.RELAX.ProportionMarkedAllArtifactsR2<0.05
+        if EEG.RELAX.ProportionMarkedInMWFArtifactMaskTotalR2<0.05
             if isfield(EEG.RELAX, 'eyeblinkmask')
                 EEG.RELAXProcessing.Details.NoiseMaskFullLength(EEG.RELAX.eyeblinkmask==1)=1;
                 EEG.RELAX.eyeblinkmask(isnan(EEG.RELAX.NaNsForExtremeOutlierPeriods))=NaN;
@@ -643,8 +647,8 @@ for Subjects=1:numel(RELAX_cfg.files)
         [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, 'notblinks');
         
         EEG.RELAX.NoiseMaskFullLengthR3=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
-        EEG.RELAXProcessing.ProportionMarkedAllArtifacts=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
-        EEG.RELAX.ProportionMarkedAllArtifactsR3=EEG.RELAXProcessing.ProportionMarkedAllArtifacts; 
+        EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
+        EEG.RELAX.ProportionMarkedInMWFArtifactMaskTotalR3=EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal; 
 
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);               
@@ -757,8 +761,56 @@ for Subjects=1:numel(RELAX_cfg.files)
     SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep ParticipantID '_RELAX.set'];    
     EEG = pop_saveset( EEG, SaveSetMWF2 );  
     
+    %% Record warnings about potential issues:
+    EEG.RELAX_issues_to_check.aParticipantID=cellstr(ParticipantID);
+    if size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2)>RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
+        EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2);
+    else
+        EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=0;
+    end
+    if (EEG.RELAXProcessingExtremeRejections.NumberOfMuscleContaminatedChannelsRecomendedToDelete...
+            +EEG.RELAXProcessingExtremeRejections.NumberOfExtremeNoiseChannelsRecomendedToDelete...
+            +size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2))...
+            >RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
+        EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsExceededThreshold=...
+            (EEG.RELAXProcessingExtremeRejections.NumberOfMuscleContaminatedChannelsRecomendedToDelete...
+            +EEG.RELAXProcessingExtremeRejections.NumberOfExtremeNoiseChannelsRecomendedToDelete...
+            +size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2));
+    else
+        EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsExceededThreshold=0;
+    end
+    if EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier>0.25
+        EEG.RELAX_issues_to_check.HighProportionExcludedAsExtremeOutlier=EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier;
+    else 
+        EEG.RELAX_issues_to_check.HighProportionExcludedAsExtremeOutlier=0;
+    end
+    EEG.RELAX_issues_to_check.NoBlinksDetected=(EEG.RELAX.IQRmethodDetectedBlinks==0);
+    if RELAX_cfg.Do_MWF_Once==1
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R1=contains(EEG.RELAXProcessingRoundOne.RankDeficiency,'Generalised');
+    end
+    if RELAX_cfg.Do_MWF_Twice==1
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R2=contains(EEG.RELAXProcessingRoundTwo.RankDeficiency,'Generalised');
+    end
+    if RELAX_cfg.Do_MWF_Thrice==1
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R3=contains(EEG.RELAXProcessingRoundThree.RankDeficiency,'Generalised');
+    end
+    if RELAX_cfg.Perform_wICA_on_ICLabel==1
+        if EEG.RELAXProcessing_wICA.Proportion_artifactICs_reduced_by_wICA>0.80
+            EEG.RELAX_issues_to_check.HighProportionOfArtifact_ICs=EEG.RELAXProcessing_wICA.Proportion_artifactICs_reduced_by_wICA;
+        else
+            EEG.RELAX_issues_to_check.HighProportionOfArtifact_ICs=0;
+        end
+        EEG.RELAX_issues_to_check.DataMaybeTooShortForValidICA = EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA;
+        EEG.RELAX_issues_to_check.fastica_symm_Didnt_Converge=EEG.RELAXProcessing_wICA.fastica_symm_Didnt_Converge(1,3);
+    end
+    
+    % Record warnings for all participants in single table:
+    RELAX_issues_to_check(Subjects,:) = struct2table(EEG.RELAX_issues_to_check,'AsArray',true);
+    
     %% Save statistics for each participant and across participants, graph cleaning metrics:
 
+    savefileone=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'RELAXProcessingExtremeRejectionsAllParticipants'];
+    save(savefileone,'RELAXProcessingExtremeRejectionsAllParticipants')
     if RELAX_cfg.Do_MWF_Once==1
         savefileone=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'ProcessingStatisticsRoundOne'];
         save(savefileone,'RELAXProcessingRoundOneAllParticipants')
@@ -783,32 +835,34 @@ for Subjects=1:numel(RELAX_cfg.files)
         savemetrics=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'RawMetrics'];
         save(savemetrics,'RawMetrics')
     end
+    if exist('RELAX_issues_to_check','var')
+        savemetrics=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'RELAX_issues_to_check'];
+        save(savemetrics,'RELAX_issues_to_check')
+    end
     savefileone=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'RELAX_cfg'];
     save(savefileone,'RELAX_cfg')
 end
 
 clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
-        'RELAXProcessingRoundThreeAllParticipants' 'FilesWithRankDeficiencyRoundOne' 'FilesWithRankDeficiencyRoundTwo' 'FilesWithRankDeficiencyRoundThree' 'NoBlinksDetected' 'Warning';
+        'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
     
 if exist('CleanedMetrics','var')
     try
         figure('Name','BlinkAmplitudeRatio');
         boxplot(CleanedMetrics.BlinkAmplitudeRatio);
+        xticklabels(RELAX_cfg.files);
     catch
     end
     try
         figure('Name','MeanMuscleStrengthFromOnlySuperThresholdValues');
-        plot(CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues);
-    catch
-    end
-    try
-        figure('Name','MeanMuscleStrengthScaledByProportionShowingMuscle');
-        plot(CleanedMetrics.MeanMuscleStrengthScaledByProportionShowingMuscle);
+        bar(CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues);
+        xticklabels(RELAX_cfg.files);
     catch
     end
     try
         figure('Name','ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel');
-        plot(CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel);
+        bar(CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel);
+        xticklabels(RELAX_cfg.files);
     catch
     end
 end

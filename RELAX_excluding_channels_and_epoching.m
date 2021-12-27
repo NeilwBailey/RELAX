@@ -108,7 +108,8 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
     % on user setting:
     YouCanRejectThisManyChannelsHere=floor(RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*TotalInitialChannels)-(TotalInitialChannels-CurrentChannels);
     
-    epochedEEG.RELAXProcessing.ExtremeDataBasedChannelToReject={}; % create empty cells for insertion into RELAX outputs table in case the following section is not performed
+    epochedEEG.RELAXProcessingExtremeRejections.MuscleBasedElectrodesToReject=0;
+    epochedEEG.RELAXProcessingExtremeRejections.ExtremeDataBasedChannelToReject={}; % create empty cells for insertion into RELAX outputs table in case the following section is not performed
 
     %% Detect voltage shift in Epoch to identify outlying channels:
     if YouCanRejectThisManyChannelsHere>0 
@@ -319,7 +320,8 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         % Delete the channel from the data:
         epochedEEG.RELAXProcessing.Details.ExtremeDataBasedChannelToReject = epochedEEG.RELAXProcessing.Details.ExtremeDataBasedChannelToReject(~any(cellfun('isempty', epochedEEG.RELAXProcessing.Details.ExtremeDataBasedChannelToReject), 2), :);
         epochedEEG=pop_select(epochedEEG,'nochannel',epochedEEG.RELAXProcessing.Details.ExtremeDataBasedChannelToReject);  
-        epochedEEG.RELAXProcessing.ExtremeDataBasedChannelToReject=epochedEEG.RELAXProcessing.Details.ExtremeDataBasedChannelToReject;
+        epochedEEG.RELAXProcessingExtremeRejections.NumberOfExtremeNoiseChannelsRecomendedToDelete=epochedEEG.RELAXProcessing.Details.NumberOfExtremeNoiseChannelsRecomendedToDelete;
+        epochedEEG.RELAXProcessingExtremeRejections.ExtremeDataBasedChannelToReject=epochedEEG.RELAXProcessing.Details.ExtremeDataBasedChannelToReject;
         epochedEEG = eeg_checkset( epochedEEG );
 
         % Record which epochs still show extreme artifacts after the electrode
@@ -329,7 +331,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         epochedEEG.RELAX.ExtremeEpochsToIgnoreInMuscleDetectionStep=sum(epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels,1,'omitnan');
 
         %% Muscle slope detection for electrode deletion:
-        epochedEEG.RELAXProcessing.MuscleBasedElectrodesToReject={};
+        epochedEEG.RELAXProcessingExtremeRejections.MuscleBasedElectrodesToReject={};
         epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject={};
         TotalInitialChannels=size(epochedEEG.allchan,2);
         CurrentChannels=size(epochedEEG.chanlocs,2);
@@ -409,12 +411,14 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
                 end
                 epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject = epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject(~any(cellfun('isempty', epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject), 2), :);
                 epochedEEG=pop_select(epochedEEG,'nochannel',epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject);  % Delete electrodes from epoched data that have been marked as showing more than the threshold number of epochs contaminated by muscle activity
-                epochedEEG.RELAXProcessing.MuscleBasedElectrodesToReject=epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject;
+                epochedEEG.RELAXProcessingExtremeRejections.MuscleBasedElectrodesToReject=epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject;
             end
         end            
     end
+    epochedEEG.RELAXProcessingExtremeRejections.NumberOfMuscleContaminatedChannelsRecomendedToDelete=epochedEEG.RELAXProcessing.Details.NumberOfMuscleContaminatedChannelsRecomendedToDelete;
     epochedEEG.RELAX.ListOfChannelsAfterRejections={epochedEEG.chanlocs.labels};
     continuousEEG=pop_select(continuousEEG,'channel',epochedEEG.RELAX.ListOfChannelsAfterRejections); % Delete electrodes from continuous data that have been marked as showing more than the threshold number of epochs contaminated by muscle activity
     continuousEEG.RELAX=epochedEEG.RELAX;
     continuousEEG.RELAXProcessing=epochedEEG.RELAXProcessing;
+    continuousEEG.RELAXProcessingExtremeRejections=epochedEEG.RELAXProcessingExtremeRejections;
 end    

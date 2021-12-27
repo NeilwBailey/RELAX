@@ -239,17 +239,18 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
     end
     % Take record of the proportion of the data marked as an extreme
     % outlier for rejection, and the epochs that were marked:
-    epochedEEG.RELAXProcessing.ProportionExcludedForExtremeOutlier=mean(epochedEEG.RELAXProcessing.Details.ExtremeOutlierPeriods,'omitnan');
+    epochedEEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier=mean(epochedEEG.RELAXProcessing.Details.ExtremeOutlierPeriods,'omitnan');
     epochedEEG.RELAX.EpochsMarkedAsNaNsForExtremeEvents=epochedEEG.RELAXProcessing.Details.AllMethodsExtremeEpochRejections;
     % Obtain a list of periods of start and end timepoints for the extreme
     % outlier periods. These are kept on record for deletion before the
     % wICA step (or before any analysis)
     [~, ~, bi] = RunLength(epochedEEG.RELAX.NaNsForExtremeOutlierPeriods);
     bi(1,(size(bi,2)+1))=size(epochedEEG.RELAX.NaNsForExtremeOutlierPeriods,2);
-    epochedEEG.RELAXProcessing.ExtremelyBadPeriodsForDeletion = reshape(bi,[2,(size(bi,2))/2])';
-    epochedEEG.RELAX.ExtremelyBadPeriodsForDeletion=epochedEEG.RELAXProcessing.ExtremelyBadPeriodsForDeletion;
+    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion = reshape(bi,[2,(size(bi,2))/2])';
+    epochedEEG.RELAX.ExtremelyBadPeriodsForDeletion=epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion;
     % Transfer details into continuousEEG struct also:
     continuousEEG.RELAXProcessing=epochedEEG.RELAXProcessing;
+    continuousEEG.RELAXProcessingExtremeRejections=epochedEEG.RELAXProcessingExtremeRejections;
     if isfield(epochedEEG, 'RELAX')==1
         continuousEEG.RELAX=epochedEEG.RELAX;
     end

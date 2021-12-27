@@ -41,7 +41,7 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
     EEG.RELAXProcessing.DelayPeriod=NaN;
     
     %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED IN RELAX FUNCTIONS:
-    if EEG.RELAXProcessing.ProportionMarkedAllArtifacts>0.05    
+    if EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal>0.05    
         [cleanEEG, d, W, SER, ARR] = mwf_process (EEG.data, EEG.RELAXProcessing.Details.NoiseMaskFullLength, RELAX_cfg.MWFDelayPeriod);
         EEG.RELAXProcessing.DelayPeriod=RELAX_cfg.MWFDelayPeriod;
         % If Generalized eigenvectors are not scaled as assumed, try again
