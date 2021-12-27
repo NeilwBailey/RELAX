@@ -59,6 +59,8 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % proportion of all epochs marked as containing muscle activity before a channel is deleted
         RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
     end
+    
+    continuousEEG.RELAX.ListOfChannelsAfterRejections={continuousEEG.chanlocs.labels}; % Get list of channels currently present
 
     % Set templates for marking artifacts, initially just a EEG.data length
     % of NaNs that the MWF template will ignore, which will be added to
@@ -99,8 +101,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
             epochedEEG.RELAXProcessing.Details.NaNsForNonEvents(:,epochedEEG.event(e).originallatency:epochedEEG.event(e).originallatency+(round(1000/RELAX_cfg.ms_per_sample)-1))=OneSecondOf0s;
         end
     end
-    epochedEEG.RELAX.NoiseMaskFullLength=continuousEEG.RELAXProcessing.Details.NaNsForNonEvents;
-    
+
     TotalInitialChannels=size(continuousEEG.allchan,2);
     CurrentChannels=size(continuousEEG.chanlocs,2);
 
@@ -416,7 +417,8 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         end            
     end
     epochedEEG.RELAXProcessingExtremeRejections.NumberOfMuscleContaminatedChannelsRecomendedToDelete=epochedEEG.RELAXProcessing.Details.NumberOfMuscleContaminatedChannelsRecomendedToDelete;
-    epochedEEG.RELAX.ListOfChannelsAfterRejections={epochedEEG.chanlocs.labels};
+    epochedEEG.RELAX.ListOfChannelsAfterRejections={epochedEEG.chanlocs.labels}; % Get list of good channels
+    epochedEEG.RELAX.NumberOfElectrodesAfterRejections=epochedEEG.nbchan;
     continuousEEG=pop_select(continuousEEG,'channel',epochedEEG.RELAX.ListOfChannelsAfterRejections); % Delete electrodes from continuous data that have been marked as showing more than the threshold number of epochs contaminated by muscle activity
     continuousEEG.RELAX=epochedEEG.RELAX;
     continuousEEG.RELAXProcessing=epochedEEG.RELAXProcessing;

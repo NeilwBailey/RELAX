@@ -245,14 +245,14 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     % so 1000Hz sampling rates require ((number of channels)^2)*120)
     % (https://sccn.ucsd.edu/wiki/Makoto%27s_useful_EEGLAB_code)
     ms_per_sample=(1000/EEG.srate);
-    if ((EEG.NumberOfChannelsAfterRejections^2)*(120/ms_per_sample))>EEG.pnts
+    if ((EEG.nbchan^2)*(120/ms_per_sample))>EEG.pnts
         EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA='yes';
     else
         EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA='no';
     end
     
     if strcmp (EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA,'yes')
-        warning('Data may have been too short for valid ICA decomposition')
+        warning('Data may have been shorter than recommended for effective ICA decomposition')
     end
     
     EEG.RELAXProcessing_wICA.Proportion_artifactICs_reduced_by_wICA=mean(ICsMostLikelyNotBrain);

@@ -422,7 +422,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject = PREPBasedChannelToReject';
     end
     EEG=pop_select(EEG,'nochannel',noisyOut.noisyChannels.all); % delete noisy electrodes detected by PREP
-    EEG.RELAX.ListOfChannelsAfterRejections={EEG.chanlocs.labels}; % Get list of good channels
+
     continuousEEG=EEG;
 
     [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(continuousEEG, RELAX_cfg); % Epoch data, detect extremely bad data, delete channels if over the set threshold for proportion of data affected by extreme outlier for each electrode
@@ -491,7 +491,7 @@ for Subjects=1:numel(RELAX_cfg.files)
               
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);          
-          
+
         EEG.RELAXProcessingRoundOne=EEG.RELAXProcessing; % Record MWF cleaning details from round 1 in EEG file          
         RELAXProcessingRoundOne=EEG.RELAXProcessingRoundOne; % Record MWF cleaning details from round 1 into file for all participants
         
@@ -566,7 +566,7 @@ for Subjects=1:numel(RELAX_cfg.files)
 
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);           
-        
+ 
         EEG.RELAXProcessingRoundTwo=EEG.RELAXProcessing; % Record MWF cleaning details from round 2 in EEG file
         RELAXProcessingRoundTwo=EEG.RELAXProcessingRoundTwo; % Record MWF cleaning details from round 2 into file for all participants
         if isfield(RELAXProcessingRoundTwo,'Details')
@@ -653,6 +653,8 @@ for Subjects=1:numel(RELAX_cfg.files)
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);               
         
+        EEG.RELAX=rmfield(EEG.RELAX,'eyeblinkmask'); % remove variables that are no longer necessary
+        EEG.RELAX=rmfield(EEG.RELAX,'ExtremeEpochsToIgnoreInMuscleDetectionStep'); % remove variables that are no longer necessary
         EEG.RELAXProcessingRoundThree=EEG.RELAXProcessing; % Record MWF cleaning details from round 3 in EEG file
         RELAXProcessingRoundThree=EEG.RELAXProcessing; % Record MWF cleaning details from round 3 into file for all participants
         
@@ -677,21 +679,16 @@ for Subjects=1:numel(RELAX_cfg.files)
         end         
     end
     
-    %% Perform robust average re-referencing of the data, reject periods marked as extreme outliers
-    
+    %% Perform robust average re-referencing of the data, reject periods marked as extreme outliers    
     if RELAX_cfg.Do_MWF_Once==0
         EEG=continuousEEG;
     end
-
     [EEG] = RELAX_average_rereference(EEG);
-
     EEG = eeg_checkset( EEG );        
-    EEG.NumberOfChannelsAfterRejections=EEG.nbchan;
-
     % Reject periods that were marked as NaNs in the MWF masks because they 
     % showed extreme shift within the epoch or extremely improbable data:
     EEG = eeg_eegrej( EEG, EEG.RELAX.ExtremelyBadPeriodsForDeletion);
-
+    
     %% Perform wICA on ICLabel identified artifacts that remain:
     if RELAX_cfg.Perform_wICA_on_ICLabel==1
         % The following performs wICA, implemented on only the components
@@ -724,31 +721,29 @@ for Subjects=1:numel(RELAX_cfg.files)
         EEG=continuousEEG;
         EEG = rmfield(EEG,'RELAXProcessing');
 
-        if isfield(EEG.RELAX, 'Metrics')
-            if isfield(EEG.RELAX.Metrics, 'Cleaned')
-                if isfield(EEG.RELAX.Metrics.Cleaned,'BlinkAmplitudeRatio')
-                    CleanedMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio;
+        if isfield(EEG,'RELAX_Metrics')
+            if isfield(EEG.RELAX_Metrics, 'Cleaned')
+                if isfield(EEG.RELAX_Metrics.Cleaned,'BlinkAmplitudeRatio')
+                    CleanedMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio;
                     CleanedMetrics.BlinkAmplitudeRatio(CleanedMetrics.BlinkAmplitudeRatio==0)=NaN;
                 end
-                if isfield(EEG.RELAX.Metrics.Cleaned,'MeanMuscleStrengthFromOnlySuperThresholdValues')
-                    CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues; 
-                    CleanedMetrics.MeanMuscleStrengthScaledByProportionShowingMuscle(Subjects)=EEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthScaledByProportionShowingMuscle;
-                    CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX.Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
+                if isfield(EEG.RELAX_Metrics.Cleaned,'MeanMuscleStrengthFromOnlySuperThresholdValues')
+                    CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX_Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues; 
+                    CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX_Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
                 end
-                if isfield(EEG.RELAX.Metrics.Cleaned,'All_SER')
-                    CleanedMetrics.All_SER(Subjects)=EEG.RELAX.Metrics.Cleaned.All_SER;
-                    CleanedMetrics.All_ARR(Subjects)=EEG.RELAX.Metrics.Cleaned.All_ARR;
+                if isfield(EEG.RELAX_Metrics.Cleaned,'All_SER')
+                    CleanedMetrics.All_SER(Subjects)=EEG.RELAX_Metrics.Cleaned.All_SER;
+                    CleanedMetrics.All_ARR(Subjects)=EEG.RELAX_Metrics.Cleaned.All_ARR;
                 end
             end
-            if isfield(EEG.RELAX.Metrics, 'Raw')
-                if isfield(EEG.RELAX.Metrics.Raw,'BlinkAmplitudeRatio')
-                    RawMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio;
+            if isfield(EEG.RELAX_Metrics, 'Raw')
+                if isfield(EEG.RELAX_Metrics.Raw,'BlinkAmplitudeRatio')
+                    RawMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio;
                     RawMetrics.BlinkAmplitudeRatio(RawMetrics.BlinkAmplitudeRatio==0)=NaN;
                 end
-                if isfield(EEG.RELAX.Metrics.Raw,'MeanMuscleStrengthFromOnlySuperThresholdValues')
-                    RawMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX.Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues; 
-                    RawMetrics.MeanMuscleStrengthScaledByProportionShowingMuscle(Subjects)=EEG.RELAX.Metrics.Raw.MeanMuscleStrengthScaledByProportionShowingMuscle;
-                    RawMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX.Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
+                if isfield(EEG.RELAX_Metrics.Raw,'MeanMuscleStrengthFromOnlySuperThresholdValues')
+                    RawMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX_Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues; 
+                    RawMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX_Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
                 end
             end   
         end
@@ -845,24 +840,29 @@ end
 
 clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
-    
+
+set(groot, 'defaultAxesTickLabelInterpreter','none');
 if exist('CleanedMetrics','var')
     try
-        figure('Name','BlinkAmplitudeRatio');
+        figure('Name','BlinkAmplitudeRatio','units','normalized','outerposition',[0.05 0.05 0.95 0.95]);
         boxplot(CleanedMetrics.BlinkAmplitudeRatio);
-        xticklabels(RELAX_cfg.files);
+        xticklabels(RELAX_cfg.files); xtickangle(90);
+        set(gca,'FontSize',16, 'FontWeight', 'bold') % Creates an axes and sets its FontSize to 21
     catch
     end
     try
-        figure('Name','MeanMuscleStrengthFromOnlySuperThresholdValues');
-        bar(CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues);
-        xticklabels(RELAX_cfg.files);
+        figure('Name','MeanMuscleStrengthFromOnlySuperThresholdValues','units','normalized','outerposition',[0.05 0.05 0.95 0.95]);
+        b=bar(CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues); 
+        xtickangle(90); xticks([1:1:size(RELAX_cfg.files,2)]); b(1).BaseValue = RELAX_cfg.MuscleSlopeThreshold;
+        xticklabels(RELAX_cfg.files); ylim([RELAX_cfg.MuscleSlopeThreshold max(CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues)+1]);b.ShowBaseLine='off';
+        set(gca,'FontSize',16, 'FontWeight', 'bold') % Creates an axes and sets its FontSize to 21
     catch
     end
     try
-        figure('Name','ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel');
+        figure('Name','ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel','units','normalized','outerposition',[0.05 0.05 0.95 0.95]);
         bar(CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel);
-        xticklabels(RELAX_cfg.files);
+        xticklabels(RELAX_cfg.files); xtickangle(90);
+        set(gca,'FontSize',16, 'FontWeight', 'bold') % Creates an axes and sets its FontSize to 21
     catch
     end
 end

@@ -23,12 +23,12 @@ function [continuousEEG, epochedEEG, BlinkMetricProblem] = RELAX_metrics_blinks(
         end
         BlinkAmplitudeRatio(1:size(BlinkAmplitudeRatioAllEpochs,1),1)=mean(BlinkAmplitudeRatioAllEpochs,3);
         if continuousEEG.RELAX.Data_has_been_cleaned==0
-            epochedEEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
-            continuousEEG.RELAX.Metrics.Raw.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
+            epochedEEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
+            continuousEEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
         end
         if continuousEEG.RELAX.Data_has_been_cleaned==1
-            epochedEEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
-            continuousEEG.RELAX.Metrics.Cleaned.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
+            epochedEEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
+            continuousEEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
         end
     catch
         BlinkMetricProblem='no blink free baseline periods available';

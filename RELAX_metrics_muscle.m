@@ -71,7 +71,7 @@ function [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epoch
         epochedEEG.RELAXProcessing.Details.Muscle_Slopes=FFTPower.powspctrm;
     end
     if computemuscleslope==1
-        %% Selecting epochs that have slopes that are shallow, suggesting high gamma and muscle artifact:     
+        %% Selecting epochs that have slopes that are shallow, suggesting muscle artifact:     
         MuscleSlopesEpochsxChannels=zeros(size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,2),size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,1));
         Muscle_Slopes=epochedEEG.RELAXProcessing.Details.Muscle_Slopes;
         for chan=1:size(Muscle_Slopes,2)
@@ -92,6 +92,7 @@ function [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epoch
         % identification of the worst epochs
         epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs=epochedEEG.RELAXProcessing.Details.MuscleSlopesEpochsxChannels;
         epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs < RELAX_cfg.MuscleSlopeThreshold) = NaN;
+        epochedEEG.RELAXProcessing.Details.MuscleSlopeSeverity=epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs;
         % Shift the baseline of the values to the RELAX_cfg.MuscleSlopeThreshold, so that all
         % muscle artifacts can be ranked in severity of EMG starting from 0 (least
         % severe) and moving more positive as more severe. This way, 0
@@ -102,22 +103,20 @@ function [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epoch
         epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochsSubthresholdEqualsZero=epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs;
         epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochsSubthresholdEqualsZero(isnan(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochsSubthresholdEqualsZero))=0;
 
-        epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel=nansum(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs,1);
+        epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel=sum(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs,1,'omitnan');
         epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel(epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel>1)=1;
         epochedEEG.RELAXProcessing.Details.NumberOfBadMuscleEpochsFromEachChannel=sum(epochedEEG.RELAXProcessing.Details.MuscleSlopesEpochsxChannels > RELAX_cfg.MuscleSlopeThreshold, 2);
 
         if continuousEEG.RELAX.Data_has_been_cleaned==0
-            epochedEEG.RELAX.Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdPerChannel=epochedEEG.RELAXProcessing.Details.NumberOfBadMuscleEpochsFromEachChannel./size(epochedEEG.RELAXProcessing.Details.MuscleSlopesEpochsxChannels,2); 
-            epochedEEG.RELAX.Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel=mean(epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel,'all','omitnan'); 
-            epochedEEG.RELAX.Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues=mean(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs,'all','omitnan');
-            epochedEEG.RELAX.Metrics.Raw.MeanMuscleStrengthScaledByProportionShowingMuscle=mean(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochsSubthresholdEqualsZero,'all','omitnan');
+            epochedEEG.RELAX_Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdPerChannel=epochedEEG.RELAXProcessing.Details.NumberOfBadMuscleEpochsFromEachChannel./size(epochedEEG.RELAXProcessing.Details.MuscleSlopesEpochsxChannels,2); 
+            epochedEEG.RELAX_Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel=mean(epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel,'all','omitnan'); 
+            epochedEEG.RELAX_Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues=mean(epochedEEG.RELAXProcessing.Details.MuscleSlopeSeverity,'all','omitnan');
         end
         if continuousEEG.RELAX.Data_has_been_cleaned==1
-            epochedEEG.RELAX.Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdPerChannel=epochedEEG.RELAXProcessing.Details.NumberOfBadMuscleEpochsFromEachChannel./size(epochedEEG.RELAXProcessing.Details.MuscleSlopesEpochsxChannels,2); 
-            epochedEEG.RELAX.Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel=mean(epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel,'all','omitnan');
-            epochedEEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues=mean(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs,'all','omitnan');
-            epochedEEG.RELAX.Metrics.Cleaned.MeanMuscleStrengthScaledByProportionShowingMuscle=mean(epochedEEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochsSubthresholdEqualsZero,'all','omitnan');
+            epochedEEG.RELAX_Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdPerChannel=epochedEEG.RELAXProcessing.Details.NumberOfBadMuscleEpochsFromEachChannel./size(epochedEEG.RELAXProcessing.Details.MuscleSlopesEpochsxChannels,2); 
+            epochedEEG.RELAX_Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel=mean(epochedEEG.RELAXProcessing.Details.EpochsContainingMuscleAnyChannel,'all','omitnan');
+            epochedEEG.RELAX_Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues=mean(epochedEEG.RELAXProcessing.Details.MuscleSlopeSeverity,'all','omitnan');
         end
-        continuousEEG.RELAX.Metrics=epochedEEG.RELAX.Metrics;
+        continuousEEG.RELAX_Metrics=epochedEEG.RELAX_Metrics;
     end
 end

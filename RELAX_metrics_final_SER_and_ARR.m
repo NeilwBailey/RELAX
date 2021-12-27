@@ -45,6 +45,6 @@ function [continuousEEG, d] = RELAX_metrics_final_SER_and_ARR(rawEEG, continuous
     d = averageref_rawEEG.data-continuousEEG.data;
 
     % Calculate SER and ARR for each type of artifact in the MWF masks:
-    [continuousEEG.RELAX.Metrics.Cleaned.All_SER, continuousEEG.RELAX.Metrics.Cleaned.All_ARR] = mwf_performance(averageref_rawEEG.data, d, NoiseMaskFullLengthAll);
+    [continuousEEG.RELAX_Metrics.Cleaned.All_SER, continuousEEG.RELAX_Metrics.Cleaned.All_ARR] = mwf_performance(averageref_rawEEG.data, d, NoiseMaskFullLengthAll);
 
 end

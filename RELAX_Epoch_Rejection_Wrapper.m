@@ -56,7 +56,7 @@ if isempty(RELAX_epoching_cfg.files)
 end
 
 %% Loop over each file in your list 
-for Subjects=2:numel(RELAX_epoching_cfg.files)
+for Subjects=1:numel(RELAX_epoching_cfg.files)
     RELAX_epoching_cfg.filename=RELAX_epoching_cfg.files{Subjects};
     clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'Subjects' 'ParticipantID' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections';
     %% Load data (assuming the data is in EEGLAB .set format):
@@ -213,8 +213,8 @@ CumulativeSeverityOfAmplitudesAboveThreshold=sum(VoltageShiftsTooHigh,1)';
 
 % Plot:
 plot(LowerBound); hold on; plot(UpperBound); 
-for c=1:size(EEG.chanlocs,2); electrode{c}=EEG.chanlocs(c).labels;end
-hold on; plot(MedianvoltageshiftwithinepochLogged); xticks([1:1:60]);xticklabels(electrode);legend('LowerBound', 'UpperBound');
+% for c=1:size(EEG.chanlocs,2); electrode{c}=EEG.chanlocs(c).labels;end
+hold on; plot(MedianvoltageshiftwithinepochLogged); xticks([1:1:60]);xticklabels({EEG.chanlocs.labels});legend('LowerBound', 'UpperBound');
 
 OutlierParticipantsToManuallyCheck = table(Participant_IDs', CumulativeSeverityOfAmplitudesBelowThreshold,CumulativeSeverityOfAmplitudesAboveThreshold);
 
