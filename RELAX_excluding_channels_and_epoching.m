@@ -229,7 +229,9 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         cfg.pad          = 'nextpow2';
         cfg.keeptrials   = 'yes';
 
+        warning('ignore the following warnings about trial definition, they are not relevant to this function');
         FFTPower = ft_freqanalysis(cfg, temp); % Compute power across the spectrum
+        
         epochedEEG.RELAXProcessing.Details.Muscle_Slopes=FFTPower.powspctrm(:,:,7:75); % Compute power across the spectrum within the frequencies used to examine potential muscle slopes (stored for later)
         foi=FFTPower.cfg.foi(1,7:75); % store the muscle foi for later
         epochedEEG.RELAXProcessing.Details.foi=FFTPower.cfg.foi(1,7:75); % store the muscle foi for later

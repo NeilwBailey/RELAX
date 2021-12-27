@@ -66,6 +66,7 @@ function [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epoch
         cfg.toi          = 0:0.05:1; % time window "slides" from -0.5 to 1 sec in steps of 0.05 sec (50 ms)
         cfg.pad          = 'nextpow2';
         cfg.keeptrials   = 'yes';
+        warning('ignore the following warnings about trial definition, they are not relevant to this function');
         FFTPower = ft_freqanalysis(cfg, temp);
         epochedEEG.RELAXProcessing.Details.Muscle_Slopes=FFTPower.powspctrm;
     end

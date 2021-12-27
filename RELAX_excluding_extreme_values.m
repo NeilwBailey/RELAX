@@ -192,6 +192,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
         cfg.pad          = 'nextpow2';
         cfg.keeptrials   = 'yes';
 
+        warning('ignore the following warnings about trial definition, they are not relevant to this function');
         FFTPower = ft_freqanalysis(cfg, temp); % Compute power across the spectrum
 
         % Calculate log-frequency log-power slope for 1-75Hz data:

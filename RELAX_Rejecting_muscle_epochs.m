@@ -33,6 +33,7 @@ function [EEG] = RELAX_Rejecting_muscle_epochs(EEG, RELAX_epoching_cfg)
     cfg.pad          = 'nextpow2';
     cfg.keeptrials   = 'yes';
 
+    warning('ignore the following warnings about trial definition, they are not relevant to this function');
     FFTPower = ft_freqanalysis(cfg, temp);
 
     %% Selecting epochs that have slopes that are shallow, suggesting muscle artifact:
