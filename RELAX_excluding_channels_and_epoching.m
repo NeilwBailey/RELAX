@@ -37,7 +37,8 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
             RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If a channel shows extreme outlying data for more than this proportion of the total data, it is deleted
         end
         if isfield(RELAX_cfg, 'ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel')==0
-            RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % proportion of all epochs marked as containing muscle activity before a channel is deleted
+            RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of epochs showing muscle activity from an electrode is higher than this, the electrode is deleted. 
+            % Set muscle proportion before deletion to 1 to not delete electrodes based on muscle activity
         end
         if isfield(RELAX_cfg, 'MuscleSlopeThreshold')==0
             RELAX_cfg.MuscleSlopeThreshold=-0.59; % log power log frequency slope threshold above which an epoch is marked as containing muscle
@@ -56,7 +57,8 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         RELAX_cfg.ExtremeDriftSlopeThreshold=-4; % slope of log frequency log power below which to reject as drift without neural activity
         RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % Proportion of data where channel shows extreme noise before channel is deleted
         RELAX_cfg.MuscleSlopeThreshold=-0.59; % log power log frequency slope threshold above which an epoch is marked as containing muscle
-        RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % proportion of all epochs marked as containing muscle activity before a channel is deleted
+        RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of epochs showing muscle activity from an electrode is higher than this, the electrode is deleted. 
+        % Set muscle proportion before deletion to 1 to not delete electrodes based on muscle activity
         RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
     end
     

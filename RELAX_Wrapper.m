@@ -45,7 +45,7 @@ clear all; close all; clc;
 % 4)Click "Run" in the menu up the top of this script
 % The script will then process all participants, taking ~10 min per participant. 
 % You can run just a subset of the participants first by altering the
-% following line: "for Subjects=1:numel(RELAX_cfg.files)"
+% following line: "for FileNumber=1:numel(RELAX_cfg.files)"
 
 % 5) The script will produce files that contain cleaning quality values for
 % relevant processes in this script. Means, SD's (or medians and MADs) 
@@ -247,7 +247,8 @@ RELAX_cfg.OnlyIncludeTaskRelatedEpochs=0; % If this =1, the MWF clean and artifa
 RELAX_cfg.MuscleSlopeThreshold=-0.59; %log-frequency log-power slope threshold for muscle artifact. Less stringent = -0.31, Middle Stringency = -0.59 or more stringent = -0.72, more negative thresholds remove more muscle.
 RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50;  % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
 % I set this reasonably high, because otherwise muscle artifacts could considerably influence the clean mask and add noise into the data
-RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing muscle activity is higher than this, the electrode is deleted
+RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of epochs showing muscle activity from an electrode is higher than this, the electrode is deleted. 
+% Set muscle proportion before deletion to 1 to not delete electrodes based on muscle activity
 RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing extreme artifacts is higher than this, the electrode is deleted
 
 RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
@@ -352,18 +353,18 @@ if isempty(RELAX_cfg.files)
     disp('No files found..')
 end
 %% Loop over each file in the directory list 
-for Subjects=1:numel(RELAX_cfg.files)
-    RELAX_cfg.filename=RELAX_cfg.files{Subjects};
-    clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
+for FileNumber=1:numel(RELAX_cfg.files)
+    RELAX_cfg.filename=RELAX_cfg.files{FileNumber};
+    clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
     %% Load data (assuming the data is in EEGLAB .set format):
     
     cd(RELAX_cfg.myPath);
     EEG = pop_loadset(RELAX_cfg.filename);
 
-    ParticipantID = extractBefore(RELAX_cfg.filename,".");
-    EEG.RELAXProcessing.aParticipantID=cellstr(ParticipantID);
-    EEG.RELAXProcessingExtremeRejections.aParticipantID=cellstr(ParticipantID);
+    FileName = extractBefore(RELAX_cfg.filename,".");
+    EEG.RELAXProcessing.aFileName=cellstr(FileName);
+    EEG.RELAXProcessingExtremeRejections.aFileName=cellstr(FileName);
     
     EEG.RELAX.Data_has_been_averagerereferenced=0;
     EEG.RELAX.Data_has_been_cleaned=0;
@@ -435,7 +436,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     if RELAX_cfg.ProbabilityDataHasNoBlinks<2
         [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, epochedEEG, RELAX_cfg); % use an IQR threshold method to detect and mark blinks
         if continuousEEG.RELAX.IQRmethodDetectedBlinks(1,1)==0 % If a participants doesn't show any blinks, make a note
-            NoBlinksDetected{Subjects,1}=ParticipantID; 
+            NoBlinksDetected{FileNumber,1}=FileName; 
         end
         if RELAX_cfg.computerawmetrics==1
         [continuousEEG, epochedEEG] = RELAX_metrics_blinks(continuousEEG, epochedEEG); % record blink amplitude ratio from raw data for comparison.
@@ -443,7 +444,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     end
 
     % Record extreme artifact rejection details for all participants in single table:
-    RELAXProcessingExtremeRejectionsAllParticipants(Subjects,:) = struct2table(epochedEEG.RELAXProcessingExtremeRejections,'AsArray',true);
+    RELAXProcessingExtremeRejectionsAllParticipants(FileNumber,:) = struct2table(epochedEEG.RELAXProcessingExtremeRejections,'AsArray',true);
     
     rawEEG=continuousEEG; % Take a copy of the not yet cleaned data for calculation of all cleaning SER and ARR at the end
     
@@ -451,7 +452,7 @@ for Subjects=1:numel(RELAX_cfg.files)
         if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected'], 'dir')
             mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected'])
         end
-        SaveSetExtremes_Rejected =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected', filesep ParticipantID '_Extremes_Rejected.set'];    
+        SaveSetExtremes_Rejected =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected', filesep FileName '_Extremes_Rejected.set'];    
         EEG = pop_saveset( rawEEG, SaveSetExtremes_Rejected ); % If desired, save data here with bad channels deleted, filtering applied, extreme outlying data periods marked
     end
 
@@ -505,14 +506,14 @@ for Subjects=1:numel(RELAX_cfg.files)
         end
         
         % Record processing statistics for all participants in single table:
-        RELAXProcessingRoundOneAllParticipants(Subjects,:) = struct2table(RELAXProcessingRoundOne,'AsArray',true);
+        RELAXProcessingRoundOneAllParticipants(FileNumber,:) = struct2table(RELAXProcessingRoundOne,'AsArray',true);
         EEG = rmfield(EEG,'RELAXProcessing');
         % Save round 1 MWF pre-processing:
         if RELAX_cfg.saveround1==1
             if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF'], 'dir')
                 mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF'])
             end
-            SaveSetMWF1 =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF', filesep ParticipantID '_MWF1.set'];    
+            SaveSetMWF1 =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '1xMWF', filesep FileName '_MWF1.set'];    
             EEG = pop_saveset( EEG, SaveSetMWF1 ); 
         end
     end
@@ -528,7 +529,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     
     if RELAX_cfg.Do_MWF_Twice==1
 
-        EEG.RELAXProcessing.aParticipantID=cellstr(ParticipantID);
+        EEG.RELAXProcessing.aFileName=cellstr(FileName);
         EEG.RELAXProcessing.ProportionMarkedBlinks=0;
         
         % If blinks weren't initially detected because they were 
@@ -578,14 +579,14 @@ for Subjects=1:numel(RELAX_cfg.files)
             end
         end
         % Record processing statistics for all participants in single table:
-        RELAXProcessingRoundTwoAllParticipants(Subjects,:) = struct2table(RELAXProcessingRoundTwo,'AsArray',true);
+        RELAXProcessingRoundTwoAllParticipants(FileNumber,:) = struct2table(RELAXProcessingRoundTwo,'AsArray',true);
         EEG = rmfield(EEG,'RELAXProcessing');
         % Save round 2 MWF pre-processing:
         if RELAX_cfg.saveround2==1
             if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF'], 'dir')
                 mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF'])
             end
-            SaveSetMWF2 =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF', filesep ParticipantID '_MWF2.set'];    
+            SaveSetMWF2 =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '2xMWF', filesep FileName '_MWF2.set'];    
             EEG = pop_saveset( EEG, SaveSetMWF2 ); 
         end     
     end
@@ -593,7 +594,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     %% PERFORM A THIRD ROUND OF MWF.    
     if RELAX_cfg.Do_MWF_Thrice==1
 
-        EEG.RELAXProcessing.aParticipantID=cellstr(ParticipantID);
+        EEG.RELAXProcessing.aFileName=cellstr(FileName);
         EEG.RELAXProcessing.ProportionMarkedBlinks=0;
         % If less than 5% of data was masked as eye blink cleaning in second round MWF, then insert
         % eye blink mask into noise mask in round 3:
@@ -667,14 +668,14 @@ for Subjects=1:numel(RELAX_cfg.files)
             end
         end
         % Record processing statistics for all participants in single table:
-        RELAXProcessingRoundThreeAllParticipants(Subjects,:) = struct2table(RELAXProcessingRoundThree,'AsArray',true);
+        RELAXProcessingRoundThreeAllParticipants(FileNumber,:) = struct2table(RELAXProcessingRoundThree,'AsArray',true);
         EEG = rmfield(EEG,'RELAXProcessing');
 
         if RELAX_cfg.saveround3==1
             if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '3xMWF'], 'dir')
                 mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep '3xMWF'])
             end
-            SaveSetMWF3 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep '3xMWF', filesep ParticipantID '_MWF3.set'];    
+            SaveSetMWF3 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep '3xMWF', filesep FileName '_MWF3.set'];    
             EEG = pop_saveset( EEG, SaveSetMWF3 ); 
         end         
     end
@@ -700,14 +701,14 @@ for Subjects=1:numel(RELAX_cfg.files)
         % inferior at cleaning compared to AMICA (which is much slower). It
         % also seems to be comparable (or only slightly worse) than
         % extended infomax (run via cudaICA for speed).
-        EEG.RELAXProcessing_wICA.aParticipantID=cellstr(ParticipantID);
+        EEG.RELAXProcessing_wICA.aFileName=cellstr(FileName);
         [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,'fastica_symm', 1, 0, EEG.srate, 5,'coif5'); 
         % adding 'Report_all_wICA_info' to the end of the parameters specified will optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category (function is ~20s slower if this is implemented)
         EEG = eeg_checkset( EEG );
 
         RELAXProcessing_wICA=EEG.RELAXProcessing_wICA;
         % Record processing statistics for all participants in single table:
-        RELAXProcessing_wICA_AllParticipants(Subjects,:) = struct2table(RELAXProcessing_wICA,'AsArray',true);
+        RELAXProcessing_wICA_AllParticipants(FileNumber,:) = struct2table(RELAXProcessing_wICA,'AsArray',true);
     end
     
     EEG.RELAX.Data_has_been_cleaned=1;
@@ -724,26 +725,26 @@ for Subjects=1:numel(RELAX_cfg.files)
         if isfield(EEG,'RELAX_Metrics')
             if isfield(EEG.RELAX_Metrics, 'Cleaned')
                 if isfield(EEG.RELAX_Metrics.Cleaned,'BlinkAmplitudeRatio')
-                    CleanedMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio;
+                    CleanedMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio,1),FileNumber)=EEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio;
                     CleanedMetrics.BlinkAmplitudeRatio(CleanedMetrics.BlinkAmplitudeRatio==0)=NaN;
                 end
                 if isfield(EEG.RELAX_Metrics.Cleaned,'MeanMuscleStrengthFromOnlySuperThresholdValues')
-                    CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX_Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues; 
-                    CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX_Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
+                    CleanedMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(FileNumber)=EEG.RELAX_Metrics.Cleaned.MeanMuscleStrengthFromOnlySuperThresholdValues; 
+                    CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(FileNumber)=EEG.RELAX_Metrics.Cleaned.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
                 end
                 if isfield(EEG.RELAX_Metrics.Cleaned,'All_SER')
-                    CleanedMetrics.All_SER(Subjects)=EEG.RELAX_Metrics.Cleaned.All_SER;
-                    CleanedMetrics.All_ARR(Subjects)=EEG.RELAX_Metrics.Cleaned.All_ARR;
+                    CleanedMetrics.All_SER(FileNumber)=EEG.RELAX_Metrics.Cleaned.All_SER;
+                    CleanedMetrics.All_ARR(FileNumber)=EEG.RELAX_Metrics.Cleaned.All_ARR;
                 end
             end
             if isfield(EEG.RELAX_Metrics, 'Raw')
                 if isfield(EEG.RELAX_Metrics.Raw,'BlinkAmplitudeRatio')
-                    RawMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio,1),Subjects)=EEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio;
+                    RawMetrics.BlinkAmplitudeRatio(1:size(EEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio,1),FileNumber)=EEG.RELAX_Metrics.Raw.BlinkAmplitudeRatio;
                     RawMetrics.BlinkAmplitudeRatio(RawMetrics.BlinkAmplitudeRatio==0)=NaN;
                 end
                 if isfield(EEG.RELAX_Metrics.Raw,'MeanMuscleStrengthFromOnlySuperThresholdValues')
-                    RawMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(Subjects)=EEG.RELAX_Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues; 
-                    RawMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(Subjects)=EEG.RELAX_Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
+                    RawMetrics.MeanMuscleStrengthFromOnlySuperThresholdValues(FileNumber)=EEG.RELAX_Metrics.Raw.MeanMuscleStrengthFromOnlySuperThresholdValues; 
+                    RawMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel(FileNumber)=EEG.RELAX_Metrics.Raw.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel;
                 end
             end   
         end
@@ -753,11 +754,11 @@ for Subjects=1:numel(RELAX_cfg.files)
     if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'], 'dir')
         mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'])
     end
-    SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep ParticipantID '_RELAX.set'];    
+    SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep FileName '_RELAX.set'];    
     EEG = pop_saveset( EEG, SaveSetMWF2 );  
     
     %% Record warnings about potential issues:
-    EEG.RELAX_issues_to_check.aParticipantID=cellstr(ParticipantID);
+    EEG.RELAX_issues_to_check.aFileName=cellstr(FileName);
     if size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2)>RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
         EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2);
     else
@@ -800,7 +801,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     end
     
     % Record warnings for all participants in single table:
-    RELAX_issues_to_check(Subjects,:) = struct2table(EEG.RELAX_issues_to_check,'AsArray',true);
+    RELAX_issues_to_check(FileNumber,:) = struct2table(EEG.RELAX_issues_to_check,'AsArray',true);
     
     %% Save statistics for each participant and across participants, graph cleaning metrics:
 
@@ -838,7 +839,7 @@ for Subjects=1:numel(RELAX_cfg.files)
     save(savefileone,'RELAX_cfg')
 end
 
-clearvars -except 'RELAX_cfg' 'Subjects' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
+clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
 
 set(groot, 'defaultAxesTickLabelInterpreter','none');

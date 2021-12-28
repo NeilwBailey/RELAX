@@ -56,13 +56,13 @@ if isempty(RELAX_epoching_cfg.files)
 end
 
 %% Loop over each file in your list 
-for Subjects=1:numel(RELAX_epoching_cfg.files)
-    RELAX_epoching_cfg.filename=RELAX_epoching_cfg.files{Subjects};
-    clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'Subjects' 'ParticipantID' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections';
+for FileNumber=1:numel(RELAX_epoching_cfg.files)
+    RELAX_epoching_cfg.filename=RELAX_epoching_cfg.files{FileNumber};
+    clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'FileNumber' 'FileName' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections';
     %% Load data (assuming the data is in EEGLAB .set format):
     EEG = pop_loadset(RELAX_epoching_cfg.filename);
-    ParticipantID = extractBefore(RELAX_epoching_cfg.files{Subjects},".");
-    Participant_IDs{1,Subjects} = extractBefore(RELAX_epoching_cfg.files{Subjects},".");
+    FileName = extractBefore(RELAX_epoching_cfg.files{FileNumber},".");
+    Participant_IDs{1,FileNumber} = extractBefore(RELAX_epoching_cfg.files{FileNumber},".");
     EEG.RELAXProcessing.ChannelsRemaining=EEG.nbchan;
 
     %% Interpolate channels that were excluded back into the data:
@@ -157,10 +157,10 @@ for Subjects=1:numel(RELAX_epoching_cfg.files)
     % advice on which participants to manually check as potential bad
     % data:        
     voltageshiftwithinepoch=range(EEG.data(:,:,:),2);
-    Medianvoltageshiftwithinepoch(:,Subjects)=median(voltageshiftwithinepoch,3);
+    Medianvoltageshiftwithinepoch(:,FileNumber)=median(voltageshiftwithinepoch,3);
     EEG.RELAXProcessing.EpochsRemaining=size(EEG.data,3);
     EEG.RELAXProcessing.ProportionOfEpochsRejected=(EEG.RELAXProcessing.InitialEpochs-EEG.RELAXProcessing.EpochsRemaining)/EEG.RELAXProcessing.InitialEpochs;
-    EEG.RELAXProcessing.aParticipantID=ParticipantID;
+    EEG.RELAXProcessing.aFileName=FileName;
 
      % Order the MWF Processing statistics structure in alphabetical order:
     [~, neworder] = sort(lower(fieldnames(EEG.RELAXProcessing)));
@@ -168,16 +168,16 @@ for Subjects=1:numel(RELAX_epoching_cfg.files)
     if isfield(EEG.EpochRejections, 'NaNsForExtremeOutlierPeriods')
         EEG.EpochRejections=rmfield(EEG.EpochRejections,'NaNsForExtremeOutlierPeriods');
     end
-    EpochRejections(Subjects,:) = struct2table(EEG.EpochRejections,'AsArray',true);
+    EpochRejections(FileNumber,:) = struct2table(EEG.EpochRejections,'AsArray',true);
     
     % If the ICA didn't converge when cleaning the data, a note is made
     % here:
     if isfield(EEG.RELAX, 'NonConvergence')
-        FilesWithoutConvergence{Subjects}=ParticipantID;
+        FilesWithoutConvergence{FileNumber}=FileName;
     end
 
     %% Save data:
-    SaveSetMWF2 =[RELAX_epoching_cfg.OutputPath filesep ParticipantID '_Epoched.set'];    
+    SaveSetMWF2 =[RELAX_epoching_cfg.OutputPath filesep FileName '_Epoched.set'];    
     EEG = pop_saveset( EEG, SaveSetMWF2 );  
 end
 
