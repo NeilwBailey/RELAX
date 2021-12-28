@@ -318,7 +318,7 @@ RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal informa
 % Fitzgibbon, S. P., DeLosAngeles, D., Lewis, T. W., Powers, D. M. W., Grummett, T. S., Whitham, E. M., ... & Pope, K. J. (2016). Automatic determination of EMG-contaminated components and validation of independent component analysis using EEG during pharmacologic paralysis. Clinical Neurophysiology, 127(3), 1781-1793.
 
 %% RUN SCRIPT BELOW:
-RELAX_cfg.FilesToProcess=[1];%:numel(RELAX_cfg.files); % Set which files to process
+RELAX_cfg.FilesToProcess=1:numel(RELAX_cfg.files); % Set which files to process
 
 RELAX_Wrapper;
 
