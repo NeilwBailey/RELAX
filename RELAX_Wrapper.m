@@ -551,6 +551,8 @@ end
 
 clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
+    
+warning('Check "RELAX_issues_to_check" to see if any issues were noted for specific files');
 
 toc
 %% POTENTIAL IMPROVEMENTS THAT COULD BE MADE:

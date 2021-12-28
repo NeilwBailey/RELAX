@@ -46,12 +46,16 @@ function [continuousEEG, epochedEEG] = RELAX_drift(continuousEEG, epochedEEG, RE
     % alpha as drift (only implemented to detect drift, the output of this
     % script is not filtered differently to the input):
     lowpassfilteredEEG = pop_tesa_filtbutter( epochedEEG, [], 5, 4, 'lowpass' );
+    Message = ['Filtering here only performed to better detect drift, output data will still be bandpass filtered from ', num2str(RELAX_cfg.HighPassFilter), ' to ', num2str(RELAX_cfg.LowPassFilter)];
+    disp(Message);
     
     % Robust average re-reference the data first (this creates a more equitable
     % spread of the data from each channel. Prior to this, channels close
     % to the common reference show very little signal, biasing the drift
     % detection threshold towards 0).
     [EEGavgref] = RELAX_average_rereference(lowpassfilteredEEG);
+    Message = ['Average re-referencing here only performed to better detect drift, data for the next processing steps will not been average re-referenced yet at this point'];
+    disp(Message);
 
     % Calculate the median across all channels, and the MAD, and the
     % threshold based on these from the number of MAD from the median that
