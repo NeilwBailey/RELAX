@@ -15,7 +15,6 @@
 
 %% RELAX_SET_PARAMETERS_AND_RUN:
 
-clear all; close all; clc;
 %% This pipeline firstly filters your data, then deletes bad electrodes and marks extremely bad periods for exclusion from further processing.
 %% It then creates a mask of clean and artifact data specific to the length of your data file, which is submitted to a multiple weiner filter (MWF) in order to clean your data.
 %% The MWF cleaned data is then submitted to an independent component analysis, and artifactual components detected by ICLabel are cleaned by wavelet enhanced ICA.
@@ -102,8 +101,10 @@ clear all; close all; clc;
 % we suggest updating to a more recent version of MATLAB if your version is
 % pre-2016.
 
+clear all; close all; clc;
+
 %% DEPENDENCIES (toolboxes you need to install, and cite if you use this script):
-% (use fileseparators 'filesep' for increased compatability if necessary) 
+% use fileseparators 'filesep' for increased compatability if necessary (replace the \ with a filesep [outside of quotes]) 
 
 % MATLAB signal processing toolbox (from MATLAB website)
 % MATLAB statistics and machine learning toolbox (from MATLAB website)
