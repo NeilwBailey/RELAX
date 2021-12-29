@@ -4,7 +4,9 @@ function [Out1, Out2, Out3, NonConvergence] = fastica_nwb(mixedsig, varargin) % 
 % FastICA for Matlab 7.x and 6.x
 % Version 2.5, October 19 2005
 % Copyright (c) Hugo Gävert, Jarmo Hurri, Jaakko Särelä, and Aapo Hyvärinen.
-%
+
+%% NWB added output for files showing non-convergence, addition noted in the code at line 476
+
 % FASTICA(mixedsig) estimates the independent components from given
 % multidimensional signals. Each row of matrix mixedsig is one
 % observed signal.  FASTICA uses Hyvarinen's fixed-point algorithm,

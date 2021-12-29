@@ -1,13 +1,26 @@
+%% RELAX EEG CLEANING PIPELINE, Copyright (C) (2022) Neil Bailey
+
+%     This program is free software: you can redistribute it and/or modify
+%     it under the terms of the GNU General Public License as published by
+%     the Free Software Foundation, either version 3 of the License, or
+%     any later version.
+% 
+%     This program is distributed in the hope that it will be useful,
+%     but WITHOUT ANY WARRANTY; without even the implied warranty of
+%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%     GNU General Public License for more details.
+% 
+%     You should have received a copy of the GNU General Public License
+%     along with this program.  If not, see https://www.gnu.org/licenses/.
+
+%% RELAX_SET_PARAMETERS_AND_RUN:
+
 clear all; close all; clc;
-
-%% RELAX EEG CLEANING PIPELINE, COPYRIGHT NEIL BAILEY (2022)
-
 %% This pipeline firstly filters your data, then deletes bad electrodes and marks extremely bad periods for exclusion from further processing.
 %% It then creates a mask of clean and artifact data specific to the length of your data file, which is submitted to a multiple weiner filter (MWF) in order to clean your data.
 %% The MWF cleaned data is then submitted to an independent component analysis, and artifactual components detected by ICLabel are cleaned by wavelet enhanced ICA.
 %% The resulting saved files are continuous, very well cleaned of artifacts, while still preserving the neural signal.
-
-%% NOTE THAT THE PIPELINE WILL ONLY WORK ON CONTINUOUS DATA
+%% Note that the pipeline will only work on continuous data.
 
 % RELAX is intended to be fully automated, using the most empirical approaches
 % we could find in order to identify periods of EEG data containing
