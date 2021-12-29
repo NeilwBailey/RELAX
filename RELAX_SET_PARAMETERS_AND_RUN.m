@@ -85,6 +85,10 @@ clear all; close all; clc;
 % that the MWF cleaning takes into account when characterising artifacts, 
 % but still cleans very effectively.
 
+% Note that the pipeline does not work well on MATLAB versions <2016,
+% we suggest updating to a more recent version of MATLAB if your version is
+% pre-2016.
+
 %% DEPENDENCIES (toolboxes you need to install, and cite if you use this script):
 % (use fileseparators 'filesep' for increased compatability if necessary) 
 
@@ -137,7 +141,7 @@ addpath('D:\Data_Analysis\Analysis_Tools_and_Software\RunLength');
 % http://mingw-w64.org/doku.php
 
 % Specify  RELAX folder location (this toolbox):
-addpath('D:\Data_Analysis\RELAX_v0_9\');
+addpath('D:\Data_Analysis\RELAX_v0_91\');
 
 % Cite muscle activity detection methods (the manuscript applied to ICA,
 % whereas this method applies them to single electrodes rather than ICA):
