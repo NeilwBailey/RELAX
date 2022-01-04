@@ -419,7 +419,9 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         [continuousEEG, epochedEEG] = RELAX_epoching(EEG, RELAX_cfg);
         [continuousEEG, ~] = RELAX_metrics_blinks(continuousEEG, epochedEEG);
         [continuousEEG, ~] = RELAX_metrics_muscle(continuousEEG, epochedEEG, RELAX_cfg);
-        [continuousEEG] = RELAX_metrics_final_SER_and_ARR(rawEEG, continuousEEG); % this is only a good metric for testing only the cleaning of artifacts marked for cleaning by MWF, see notes in function.
+        if RELAX_cfg.Do_MWF_Once==1
+            [continuousEEG] = RELAX_metrics_final_SER_and_ARR(rawEEG, continuousEEG); % this is only a good metric for testing only the cleaning of artifacts marked for cleaning by MWF, see notes in function.
+        end
         EEG=continuousEEG;
         EEG = rmfield(EEG,'RELAXProcessing');
 
