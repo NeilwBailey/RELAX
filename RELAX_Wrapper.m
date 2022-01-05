@@ -415,7 +415,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         % also seems to be comparable (or only slightly worse) than
         % extended infomax (run via cudaICA for speed).
         EEG.RELAXProcessing_wICA.aFileName=cellstr(FileName);
-        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,'fastica_symm', 1, 0, EEG.srate, 5,'coif5'); 
+        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,RELAX_cfg.ICA_method, 1, 0, EEG.srate, 5,'coif5'); 
         % adding 'Report_all_wICA_info' to the end of the parameters specified will optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category (function is ~20s slower if this is implemented)
         EEG = eeg_checkset( EEG );
 

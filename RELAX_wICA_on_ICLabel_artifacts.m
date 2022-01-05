@@ -195,8 +195,10 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     [~, I]=max(OUTEEG.etc.ic_classification.ICLabel.classifications, [], 2);
     ICsMostLikelyNotBrain=(I>2)'; % Use ICLabel to detect artifacts except for muscle (detected below using RELAX_muscle_IC_detection)
     
-    [EEG.icablinkmetricsout] = icablinkmetrics(OUTEEG); % Use icablinkmetrics to detect any blinks that ICLabel might have missed
-    ICsMostLikelyNotBrain(EEG.icablinkmetricsout.identifiedcomponents)=1;
+    [OUTEEG.icablinkmetricsout] = icablinkmetrics(OUTEEG); % Use icablinkmetrics to detect any blinks that ICLabel might have missed
+    if OUTEEG.icablinkmetricsout.identifiedcomponents>1
+        ICsMostLikelyNotBrain(OUTEEG.icablinkmetricsout.identifiedcomponents)=1;
+    end
     
     [ICsMostLikelyMuscle] = RELAX_muscle_IC_detection(OUTEEG,RELAX_cfg); % Use empirical log-frequency log-muscle approach to detect muscle activity components
     ICsMostLikelyNotBrain(ICsMostLikelyMuscle)=1;
