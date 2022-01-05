@@ -478,7 +478,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     else
         EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsExceededThreshold=0;
     end
-    if EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier>0.25
+    if EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier>0.20
         EEG.RELAX_issues_to_check.HighProportionExcludedAsExtremeOutlier=EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier;
     else 
         EEG.RELAX_issues_to_check.HighProportionExcludedAsExtremeOutlier=0;
@@ -562,8 +562,9 @@ if exist('CleanedMetrics','var')
     try
         figure('Name','ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel','units','normalized','outerposition',[0.05 0.05 0.95 0.95]);
         bar(CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel);
-        xticklabels(RELAX_cfg.files); xtickangle(90);
         set(gca,'FontSize',16, 'FontWeight', 'bold') % Creates an axes and sets its FontSize to 21
+        xtickangle(90); xticks([1:1:size(RELAX_cfg.files,2)]);
+        xticklabels(RELAX_cfg.files);
     catch
     end
 end

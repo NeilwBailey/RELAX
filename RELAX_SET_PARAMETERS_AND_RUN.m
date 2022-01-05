@@ -112,7 +112,7 @@ clear all; close all; clc;
 % EEGLAB:
 % https://sccn.ucsd.edu/eeglab/index.php
 % Delorme, A., & Makeig, S. (2004). EEGLAB: an open source toolbox for analysis of single-trial EEG dynamics including independent component analysis. Journal of neuroscience methods, 134(1), 9-21.
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1');
+addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\');
 eeglab;
 
 % PREP pipeline to reject bad electrodes (install plugin to EEGLAB, or via the github into the EEGLAB plugin folder): 
