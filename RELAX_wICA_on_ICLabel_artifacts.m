@@ -128,18 +128,18 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
         % the case of non-convergence, then switches to fastica_defl to
         % ensure ICA convergence (as cleaning as adversely affected by
         % non-convergence issues).
-         [OUTEEG, ~, NonConvergence] = pop_runica_nwb_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
+         [OUTEEG, ~, NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
          fastica_symm_Didnt_Converge(1,1)=NonConvergence;
          if NonConvergence==1
-             [OUTEEG, ~, NonConvergence] = pop_runica_nwb_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
+             [OUTEEG, ~, NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
              fastica_symm_Didnt_Converge(1,2)=NonConvergence;
          end
          if NonConvergence==1
-             [OUTEEG, ~, NonConvergence] = pop_runica_nwb_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
+             [OUTEEG, ~, NonConvergence] = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'symm', 'g', 'tanh', 'stabilization', 'on');
              fastica_symm_Didnt_Converge(1,3)=NonConvergence;
          end
          if NonConvergence==1
-             OUTEEG = pop_runica_nwb_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'defl', 'g', 'tanh', 'stabilization', 'on');
+             OUTEEG = pop_runica_nwb( EEG, 'icatype', 'fastica','numOfIC', EEG.nbchan, 'approach', 'defl', 'g', 'tanh', 'stabilization', 'on');
          end
          W = OUTEEG.icaweights*OUTEEG.icasphere;
          A = inv(W);
