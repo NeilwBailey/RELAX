@@ -187,13 +187,19 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
         end
         IC=reshape(OUTEEG.icaact, size(OUTEEG.icaact,1), []);
     end
-    %% NWB added section to identify artifactual ICs with ICLabel:
+    %% NWB added section to identify artifactual ICs with ICLabel and ica_blink_metrics:
     % Use ICLabel to identify artifactual components, so that wICA can be
     % performed on them only:
     % (https://github.com/sccn/ICLabel)
     OUTEEG = iclabel(OUTEEG);
     [~, I]=max(OUTEEG.etc.ic_classification.ICLabel.classifications, [], 2);
-    ICsMostLikelyNotBrain=(I>1)';
+    ICsMostLikelyNotBrain=(I>2)'; % Use ICLabel to detect artifacts except for muscle (detected below using RELAX_muscle_IC_detection)
+    
+    [EEG.icablinkmetricsout] = icablinkmetrics(OUTEEG); % Use icablinkmetrics to detect any blinks that ICLabel might have missed
+    ICsMostLikelyNotBrain(EEG.icablinkmetricsout.identifiedcomponents)=1;
+    
+    [ICsMostLikelyMuscle] = RELAX_muscle_IC_detection(OUTEEG,RELAX_cfg); % Use empirical log-frequency log-muscle approach to detect muscle activity components
+    ICsMostLikelyNotBrain(ICsMostLikelyMuscle)=1;
     %% NWB addition ended
 
     % padding data for proper wavelet transform...data must be divisible by

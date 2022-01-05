@@ -31,9 +31,13 @@ function [EEG] = RELAX_Rejecting_muscle_epochs(EEG, RELAX_epoching_cfg)
         if isfield(RELAX_epoching_cfg, 'MaxProportionOfDataCanBeMarkedAsMuscle')==0
             RELAX_epoching_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50; % maximum that can be deleted for showing muscle slopes
         end
+        if isfield(RELAX_cfg, 'LineNoiseOrNotchFilterAffectedData')==0
+            RELAX_epoching_cfg.LineNoiseOrNotchFilterAffectedData=1; % Removes influence of line noise (or line noise filtering) from the muscle slope computations.
+        end
     elseif exist('RELAX_epoching_cfg', 'var')==0
         RELAX_epoching_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50;  
         RELAX_epoching_cfg.MuscleSlopeThreshold=-0.31;
+        RELAX_epoching_cfg.LineNoiseOrNotchFilterAffectedData=1;
     end
     
     temp=eeglab2fieldtrip(EEG, 'preprocessing');
@@ -52,6 +56,23 @@ function [EEG] = RELAX_Rejecting_muscle_epochs(EEG, RELAX_epoching_cfg)
 
     warning('ignore the following warnings about trial definition, they are not relevant to this function');
     FFTPower = ft_freqanalysis(cfg, temp);
+    
+    % The following removes influence of line noise (or line noise filtering)
+    % from the muscle slope computations. It might not be necessary
+    % if no online notch filter was applied, and nt_zapline fixes
+    % the influence of line noise of the spectrum slope:
+    if RELAX_epoching_cfg.LineNoiseOrNotchFilterAffectedData==1  
+        FreqHz=FFTPower.cfg.foi;
+        FreqHz(FreqHz<RELAX_cfg.LineNoiseFrequency-2)=0;
+        LowerNotchFreq=min(FreqHz(FreqHz>0));
+        LowerNotchFreqLocation=find(FreqHz==LowerNotchFreq);
+        FreqHz=FFTPower.cfg.foi;
+        FreqHz(FreqHz>RELAX_cfg.LineNoiseFrequency+2)=0;
+        UpperNotchFreq=max(FreqHz(FreqHz>0));
+        UpperNotchFreqLocation=find(FreqHz==UpperNotchFreq);
+        FFTPower.powspctrm(:,:,LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+        FFTPower.cfg.foi(LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+    end
 
     %% Selecting epochs that have slopes that are shallow, suggesting muscle artifact:
     EEG.RELAXProcessing.Details.muscleSlopesEpochsxChannels=zeros(size(FFTPower.powspctrm,2),size(FFTPower.powspctrm,1));
@@ -59,7 +80,7 @@ function [EEG] = RELAX_Rejecting_muscle_epochs(EEG, RELAX_epoching_cfg)
         for trial=1:size(FFTPower.powspctrm,1)
             powspctrm=squeeze(FFTPower.powspctrm(trial,chan,:))';
             % Fit linear regression to log-log data
-            p = polyfit(log(FFTPower.cfg.foi(1,:)),log(powspctrm(1,1:69)),1);
+            p = polyfit(log(FFTPower.cfg.foi(1,:)),log(powspctrm(1,1:size(FFTPower.cfg.foi,2))),1);
             % Store the slope
             EEG.RELAXProcessing.Details.muscleSlopesEpochsxChannels(chan,trial) = p(1);         
         end

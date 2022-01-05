@@ -47,6 +47,7 @@ RELAX_epoching_cfg.reject_amp=60; % Absolute voltage amplitude threshold - if an
 RELAX_epoching_cfg.MuscleSlopeThreshold=-0.31; % log frequency/ log power slope threshold for muscle artifact. Less stringent = -0.31, Middle Stringency = -0.59 or more stringent = -0.72, more negative thresholds remove more muscle. 
 RELAX_epoching_cfg.MaxProportionOfMuscleEpochsToClean=0.50; % Maximum proportion of muscle epochs to remove (if more epochs than this are affected, only the worst effected up to this proportion will be removed)
 RELAX_epoching_cfg.RemoveEpochsShowingMuscleActivity='yes'; % 'yes' or 'no'
+RELAX_epoching_cfg.LineNoiseOrNotchFilterAffectedData=1; % Removes influence of line noise (or line noise filtering) from the muscle slope computations.
 
 RELAX_epoching_cfg.DataType='Task'; % 'Task' for cognitive tasks, 'Resting' for data without stimuli presented
 

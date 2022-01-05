@@ -112,7 +112,19 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     % de Cheveigné, A., & Arzounian, D. (2018). Robust detrending, rereferencing, outlier detection, and inpainting for multichannel data. NeuroImage, 172, 903-912.
     
     % Use TESA to apply butterworth filter: 
-    EEG = pop_tesa_filtbutter( EEG, RELAX_cfg.LineNoiseFrequency-3, RELAX_cfg.LineNoiseFrequency+3, 2, 'bandstop' );
+%    EEG = pop_tesa_filtbutter( EEG, RELAX_cfg.LineNoiseFrequency-2, RELAX_cfg.LineNoiseFrequency+2, 4, 'bandstop' );
+
+    %% Zap line instead of notch butter filter?
+    
+    EEG.data = EEG.data-repmat(mean(EEG.data,2),[1 size(EEG.data,2)]); % DC correct (0 mean the data)
+
+    % parameters
+    FLINE=RELAX_cfg.LineNoiseFrequency/EEG.srate; % line frequency
+    NREMOVE=3; % number of components to remove. Suggested to be optimal between 2-4, might require testing for each individual dataset
+    settings.nkeep=30;
+    LineNoiseCleanedData=nt_zapline(EEG.data',FLINE,NREMOVE,settings);
+    EEG.data=LineNoiseCleanedData.';
+
     EEG = pop_tesa_filtbutter( EEG, RELAX_cfg.HighPassFilter, RELAX_cfg.LowPassFilter, 4, 'bandpass' );
 
     %% Clean flat channels and bad channels showing improbable data:
@@ -478,7 +490,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     else
         EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsExceededThreshold=0;
     end
-    if EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier>0.25
+    if EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier>0.20
         EEG.RELAX_issues_to_check.HighProportionExcludedAsExtremeOutlier=EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier;
     else 
         EEG.RELAX_issues_to_check.HighProportionExcludedAsExtremeOutlier=0;
@@ -562,8 +574,9 @@ if exist('CleanedMetrics','var')
     try
         figure('Name','ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel','units','normalized','outerposition',[0.05 0.05 0.95 0.95]);
         bar(CleanedMetrics.ProportionOfEpochsShowingMuscleAboveThresholdAnyChannel);
-        xticklabels(RELAX_cfg.files); xtickangle(90);
         set(gca,'FontSize',16, 'FontWeight', 'bold') % Creates an axes and sets its FontSize to 21
+        xtickangle(90); xticks([1:1:size(RELAX_cfg.files,2)]);
+        xticklabels(RELAX_cfg.files);
     catch
     end
 end

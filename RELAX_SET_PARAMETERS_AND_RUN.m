@@ -101,6 +101,18 @@
 % we suggest updating to a more recent version of MATLAB if your version is
 % pre-2016.
 
+%% Beta version updates:
+
+% 1) added ica_blink_metrics as a double check to identify blink ICs that
+% ICLabel sometimes misses
+
+% 2) replaced muscle detection using ICLabel with IC muscle slopes as per Fitzgibbon et al (2016)
+
+% 3) changed notch filter settings to use nt_zapline instead of butterworth filtering
+
+% 4) added option to exclude line noise or notch filter affected
+% frequencies from log-frequency log-power slope artifact detection methods
+
 clear all; close all; clc;
 
 %% DEPENDENCIES (toolboxes you need to install, and cite if you use this script):
@@ -112,7 +124,7 @@ clear all; close all; clc;
 % EEGLAB:
 % https://sccn.ucsd.edu/eeglab/index.php
 % Delorme, A., & Makeig, S. (2004). EEGLAB: an open source toolbox for analysis of single-trial EEG dynamics including independent component analysis. Journal of neuroscience methods, 134(1), 9-21.
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1');
+addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\');
 eeglab;
 
 % PREP pipeline to reject bad electrodes (install plugin to EEGLAB, or via the github into the EEGLAB plugin folder): 
@@ -141,7 +153,7 @@ addpath('C:\Program Files\MATLAB\fieldtrip-20180805');
 
 % fastica:
 % http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml 
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1\plugins\FastICA_25\');
+addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\FastICA_25\');
 
 % ICLabel in your eeglab folder as a plugin or via the github:
 % https://github.com/sccn/ICLabel
@@ -153,6 +165,9 @@ addpath('D:\Data_Analysis\Analysis_Tools_and_Software\RunLength');
 
 % Need to install MinGW-w64 if on windows if you haven't already:
 % http://mingw-w64.org/doku.php
+
+% Install NoiseTools (http://audition.ens.fr/adc/NoiseTools/)
+addpath(genpath('D:\Data_Analysis\NoiseTools\NoiseTools'));
 
 % Specify  RELAX folder location (this toolbox):
 addpath('D:\Data_Analysis\RELAX_v0_91\');
@@ -274,6 +289,8 @@ RELAX_cfg.saveround3=0; % setting this value to 1 tells the script to save the t
 
 RELAX_cfg.OnlyIncludeTaskRelatedEpochs=0; % If this =1, the MWF clean and artifact templates will only include data within 5 seconds of a task trigger (other periods will be marked as NaN, which the MWF script ignores).
 
+RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1; % Removes influence of line noise (or line noise filtering) from the muscle slope computations. It might not be necessary if no online notch filter was applied, and nt_zapline fixes the influence of line noise of the spectrum slope
+RELAX_cfg.MuscleSlopeThresholdFor_wICA_cleaning=-0.59; % log-frequency log-power slope threshold for ICA muscle artifact detection and cleaning with wICA
 RELAX_cfg.MuscleSlopeThreshold=-0.59; %log-frequency log-power slope threshold for muscle artifact. Less stringent = -0.31, Middle Stringency = -0.59 or more stringent = -0.72, more negative thresholds remove more muscle.
 RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50;  % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
 % I set this reasonably high, because otherwise muscle artifacts could considerably influence the clean mask and add noise into the data

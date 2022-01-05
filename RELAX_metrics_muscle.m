@@ -25,9 +25,13 @@ function [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epoch
         if isfield(RELAX_cfg, 'LowPassFilter')==0
             RELAX_cfg.LowPassFilter=80;
         end
+        if isfield(RELAX_cfg, 'LineNoiseOrNotchFilterAffectedData')==0
+            RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1; % Removes influence of line noise (or line noise filtering) from the muscle slope computations.
+        end
     elseif exist('RELAX_cfg', 'var')==0
         RELAX_cfg.MuscleSlopeThreshold=-0.59;
         RELAX_cfg.LowPassFilter=80;
+        RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1;
     end
     
     computefourier=0; computemuscleslope=0;
@@ -86,16 +90,37 @@ function [continuousEEG, epochedEEG] = RELAX_metrics_muscle(continuousEEG, epoch
         warning('ignore the following warnings about trial definition, they are not relevant to this function');
         FFTPower = ft_freqanalysis(cfg, temp);
         epochedEEG.RELAXProcessing.Details.Muscle_Slopes=FFTPower.powspctrm;
+        foi=FFTPower.cfg.foi;
+    else 
+        foi=epochedEEG.RELAXProcessing.Details.foi;
     end
     if computemuscleslope==1
         %% Selecting epochs that have slopes that are shallow, suggesting muscle artifact:     
         MuscleSlopesEpochsxChannels=zeros(size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,2),size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,1));
         Muscle_Slopes=epochedEEG.RELAXProcessing.Details.Muscle_Slopes;
+        
+        % The following removes influence of line noise (or line noise filtering)
+        % from the muscle slope computations. It might not be necessary
+        % if no online notch filter was applied, and nt_zapline fixes
+        % the influence of line noise of the spectrum slope:
+        if RELAX_cfg.LineNoiseOrNotchFilterAffectedData==1  
+            FreqHz=foi;
+            FreqHz(FreqHz<RELAX_cfg.LineNoiseFrequency-2)=0;
+            LowerNotchFreq=min(FreqHz(FreqHz>0));
+            LowerNotchFreqLocation=find(FreqHz==LowerNotchFreq);
+            FreqHz=FFTPower.cfg.foi;
+            FreqHz(FreqHz>RELAX_cfg.LineNoiseFrequency+2)=0;
+            UpperNotchFreq=max(FreqHz(FreqHz>0));
+            UpperNotchFreqLocation=find(FreqHz==UpperNotchFreq);
+            Muscle_Slopes(:,:,LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+            foi(LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+        end
+        
         for chan=1:size(Muscle_Slopes,2)
             parfor trial=1:size(Muscle_Slopes,1)
                 powspctrm=squeeze(Muscle_Slopes(trial,chan,:))';
                 % Fit linear regression to log-log data
-                p = polyfit(log(FFTPower.cfg.foi(1,:)),log(powspctrm(1,1:69)),1);
+                p = polyfit(log(foi(1,:)),log(powspctrm(1,1:size(foi,2))),1);
                 % Store the slope
                 MuscleSlopesEpochsxChannels(chan,trial) = p(1);         
             end

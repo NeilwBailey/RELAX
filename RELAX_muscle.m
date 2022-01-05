@@ -29,9 +29,13 @@ function [continuousEEG, epochedEEG] = RELAX_muscle(continuousEEG, epochedEEG, R
         if isfield(RELAX_cfg, 'MaxProportionOfDataCanBeMarkedAsMuscle')==0
             RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50; % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
         end
+        if isfield(RELAX_cfg, 'LineNoiseOrNotchFilterAffectedData')==0
+            RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1; % Removes influence of line noise (or line noise filtering) from the muscle slope computations.
+        end
     elseif exist('RELAX_cfg', 'var')==0
         RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50; % Maximum amount of data periods to be marked as muscle artifact for cleaning by the MWF. You want at least a reasonable amount of both clean and artifact templates for effective cleaning.
         RELAX_cfg.MuscleSlopeThreshold=-0.59;
+        RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1; 
     end
     
     % Only compute the frequency-power details if they aren't already available from a previous function:
@@ -51,6 +55,24 @@ function [continuousEEG, epochedEEG] = RELAX_muscle(continuousEEG, epochedEEG, R
             cfg.keeptrials   = 'yes';
             warning('ignore the following warnings about trial definition, they are not relevant to this function');
             FFTPower = ft_freqanalysis(cfg, temp); % Compute power spectrum
+            
+            % The following removes influence of line noise (or line noise filtering)
+            % from the muscle slope computations. It might not be necessary
+            % if no online notch filter was applied, and nt_zapline fixes
+            % the influence of line noise of the spectrum slope:
+            if RELAX_cfg.LineNoiseOrNotchFilterAffectedData==1  
+                FreqHz=FFTPower.cfg.foi;
+                FreqHz(FreqHz<RELAX_cfg.LineNoiseFrequency-2)=0;
+                LowerNotchFreq=min(FreqHz(FreqHz>0));
+                LowerNotchFreqLocation=find(FreqHz==LowerNotchFreq);
+                FreqHz=FFTPower.cfg.foi;
+                FreqHz(FreqHz>RELAX_cfg.LineNoiseFrequency+2)=0;
+                UpperNotchFreq=max(FreqHz(FreqHz>0));
+                UpperNotchFreqLocation=find(FreqHz==UpperNotchFreq);
+                FFTPower.powspctrm(:,:,LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+                FFTPower.cfg.foi(LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+            end
+
             epochedEEG.RELAXProcessing.Details.Muscle_Slopes=FFTPower.powspctrm;
             epochedEEG.RELAXProcessing.Details.foi=FFTPower.cfg.foi;  
         end
@@ -61,7 +83,7 @@ function [continuousEEG, epochedEEG] = RELAX_muscle(continuousEEG, epochedEEG, R
             parfor trial=1:size(Muscle_Slopes,1)
                 powspctrm=squeeze(Muscle_Slopes(trial,chan,:))';
                 % Fit linear regression to log-log data
-                p = polyfit(log(epochedEEG.RELAXProcessing.Details.foi(1,:)),log(powspctrm(1,1:69)),1);
+                p = polyfit(log(epochedEEG.RELAXProcessing.Details.foi(1,:)),log(powspctrm(1,1:size(epochedEEG.RELAXProcessing.Details.foi,2))),1);
                 % Store the slope
                 MuscleSlopesEpochsxChannels(chan,trial) = p(1);         
             end

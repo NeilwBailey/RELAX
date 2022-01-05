@@ -50,6 +50,9 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
         if isfield(RELAX_cfg, 'ExtremeDriftSlopeThreshold')==0
             RELAX_cfg.ExtremeDriftSlopeThreshold=-4; % slope of log frequency log power below which to reject as drift without neural activity
         end
+        if isfield(RELAX_cfg, 'LineNoiseOrNotchFilterAffectedData')==0
+            RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1; % Removes influence of line noise (or line noise filtering) from the muscle slope computations.
+        end
     elseif exist('RELAX_cfg', 'var')==0     
         RELAX_cfg.ExtremeVoltageShiftThreshold=25; %MAD from the median of all epochs for each electrode against itself. This could be set lower and would catch less severe pops
         RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=8; %SD from the mean of all epochs for each electrode against itself. This could be set lower and would catch less severe improbable data
@@ -59,6 +62,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
         RELAX_cfg.ExtremeAbsoluteVoltageThreshold=500; % microvolts max or min above which will be excluded from cleaning and deleted from data
         RELAX_cfg.ExtremeBlinkShiftThreshold=3; % How many MAD from the median of blink affected epochs to exclude as extreme data
         RELAX_cfg.ExtremeDriftSlopeThreshold=-4; % slope of log frequency log power below which to reject as drift without neural activity
+        RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1;
     end
     %% Detect voltage shift in Epoch to identify outlying channels:
     if RELAX_cfg.ProbabilityDataHasNoBlinks<2
@@ -211,6 +215,23 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
 
         warning('ignore the following warnings about trial definition, they are not relevant to this function');
         FFTPower = ft_freqanalysis(cfg, temp); % Compute power across the spectrum
+        
+        % The following removes influence of line noise (or line noise filtering)
+        % from the muscle slope computations. It might not be necessary
+        % if no online notch filter was applied, and nt_zapline fixes
+        % the influence of line noise of the spectrum slope:
+        if RELAX_cfg.LineNoiseOrNotchFilterAffectedData==1  
+            FreqHz=FFTPower.cfg.foi;
+            FreqHz(FreqHz<RELAX_cfg.LineNoiseFrequency-2)=0;
+            LowerNotchFreq=min(FreqHz(FreqHz>0));
+            LowerNotchFreqLocation=find(FreqHz==LowerNotchFreq);
+            FreqHz=FFTPower.cfg.foi;
+            FreqHz(FreqHz>RELAX_cfg.LineNoiseFrequency+2)=0;
+            UpperNotchFreq=max(FreqHz(FreqHz>0));
+            UpperNotchFreqLocation=find(FreqHz==UpperNotchFreq);
+            FFTPower.powspctrm(:,:,LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+            FFTPower.cfg.foi(LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+        end
 
         % Calculate log-frequency log-power slope for 1-75Hz data:
         DriftRatioEpochsxChannels=zeros(size(FFTPower.powspctrm,2),size(FFTPower.powspctrm,1));
@@ -218,7 +239,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
             parfor trial=1:size(FFTPower.powspctrm,1)
                 powspctrm=squeeze(FFTPower.powspctrm(trial,chan,:))';
                 % Fit linear regression to log-log data
-                p = polyfit(log(FFTPower.cfg.foi(1,:)),log(powspctrm(1,1:75)),1);
+                p = polyfit(log(FFTPower.cfg.foi(1,:)),log(powspctrm(1,1:size(FFTPower.cfg.foi,2))),1);
                 % Store the slope
                 DriftRatioEpochsxChannels(chan,trial) = p(1);         
             end

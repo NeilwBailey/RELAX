@@ -63,6 +63,9 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         if isfield(RELAX_cfg, 'MaxProportionOfElectrodesThatCanBeDeleted')==0
             RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
         end
+        if isfield(RELAX_cfg, 'LineNoiseOrNotchFilterAffectedData')==0
+            RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1; % Removes influence of line noise (or line noise filtering) from the muscle slope computations.
+        end
     elseif exist('RELAX_cfg', 'var')==0     
         RELAX_cfg.ExtremeVoltageShiftThreshold=25; %MAD from the median of all epochs for each electrode against itself. This could be set lower and would catch less severe pops
         RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=8; %SD from the mean of all epochs for each electrode against itself. This could be set lower and would catch less severe improbable data
@@ -77,6 +80,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % If the proportion of epochs showing muscle activity from an electrode is higher than this, the electrode is deleted. 
         % Set muscle proportion before deletion to 1 to not delete electrodes based on muscle activity
         RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
+        RELAX_cfg.LineNoiseOrNotchFilterAffectedData=1;
     end
     
     continuousEEG.RELAX.ListOfChannelsAfterRejections={continuousEEG.chanlocs.labels}; % Get list of channels currently present
@@ -256,6 +260,23 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         epochedEEG.RELAXProcessing.Details.Muscle_Slopes=FFTPower.powspctrm(:,:,7:75); % Compute power across the spectrum within the frequencies used to examine potential muscle slopes (stored for later)
         foi=FFTPower.cfg.foi(1,7:75); % store the muscle foi for later
         epochedEEG.RELAXProcessing.Details.foi=FFTPower.cfg.foi(1,7:75); % store the muscle foi for later
+        
+        % The following removes influence of line noise (or line noise filtering)
+        % from the muscle slope computations. It might not be necessary
+        % if no online notch filter was applied, and nt_zapline fixes
+        % the influence of line noise of the spectrum slope:
+        if RELAX_cfg.LineNoiseOrNotchFilterAffectedData==1  
+            FreqHz=FFTPower.cfg.foi;
+            FreqHz(FreqHz<RELAX_cfg.LineNoiseFrequency-2)=0;
+            LowerNotchFreq=min(FreqHz(FreqHz>0));
+            LowerNotchFreqLocation=find(FreqHz==LowerNotchFreq);
+            FreqHz=FFTPower.cfg.foi;
+            FreqHz(FreqHz>RELAX_cfg.LineNoiseFrequency+2)=0;
+            UpperNotchFreq=max(FreqHz(FreqHz>0));
+            UpperNotchFreqLocation=find(FreqHz==UpperNotchFreq);
+            FFTPower.powspctrm(:,:,LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+            FFTPower.cfg.foi(LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+        end
 
         % Calculate log-frequency log-power slope for 1-75Hz data:
         DriftRatioEpochsxChannels=zeros(size(FFTPower.powspctrm,2),size(FFTPower.powspctrm,1));
@@ -263,7 +284,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
             parfor trial=1:size(FFTPower.powspctrm,1)
                 powspctrm=squeeze(FFTPower.powspctrm(trial,chan,:))';
                 % Fit linear regression to log-log data
-                p = polyfit(log(FFTPower.cfg.foi(1,:)),log(powspctrm(1,1:75)),1);
+                p = polyfit(log(FFTPower.cfg.foi(1,:)),log(powspctrm(1,1:size(FFTPower.cfg.foi,2))),1);
                 % Store the slope
                 DriftRatioEpochsxChannels(chan,trial) = p(1);         
             end
@@ -363,6 +384,24 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
             % Selecting epochs that have slopes that are shallow, suggesting high gamma and muscle artifact:
             MuscleSlopesEpochsxChannels=zeros(size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,2),size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,1));
             Muscle_Slopes=epochedEEG.RELAXProcessing.Details.Muscle_Slopes;
+            
+            % The following removes influence of line noise (or line noise filtering)
+            % from the muscle slope computations. It might not be necessary
+            % if no online notch filter was applied, and nt_zapline fixes
+            % the influence of line noise of the spectrum slope:
+            if RELAX_cfg.LineNoiseOrNotchFilterAffectedData==1  
+                FreqHz=foi;
+                FreqHz(FreqHz<RELAX_cfg.LineNoiseFrequency-2)=0;
+                LowerNotchFreq=min(FreqHz(FreqHz>0));
+                LowerNotchFreqLocation=find(FreqHz==LowerNotchFreq);
+                FreqHz=FFTPower.cfg.foi;
+                FreqHz(FreqHz>RELAX_cfg.LineNoiseFrequency+2)=0;
+                UpperNotchFreq=max(FreqHz(FreqHz>0));
+                UpperNotchFreqLocation=find(FreqHz==UpperNotchFreq);
+                Muscle_Slopes(:,:,LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+                foi(LowerNotchFreqLocation:UpperNotchFreqLocation)=[];
+            end
+            
             % Compute slope of log-frequency log-power from within the
             % slopes relevant for muscle detection:
             for chan=1:size(Muscle_Slopes,2)
