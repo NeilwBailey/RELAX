@@ -23,7 +23,7 @@
 
 %% NWB modifications to original wICA are noted in the following:
 
-function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB altered to output EEGLAB struct after wICA removal of artifacts identified by ICLabel
+function [EEG,wIC,A,W,IC,BlinkElectrodes] = RELAX_wICA_on_ICLabel_artifacts(EEG,RELAX_cfg) % NWB altered to output EEGLAB struct after wICA removal of artifacts identified by ICLabel
     %--------------- function [wIC,A,W] = wICA(data,varargin) -----------------
     %
     % Performs ICA on data matrix (row vector) and subsequent wavelet
@@ -71,26 +71,16 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     % By JMS, 11/10/2015
     %---------------------------------------------------------------------------------------
 
-    % check inputs
-    if nargin>1 && ~isempty(varargin{1})
-    type=varargin{1}; else type='runica';end
-    if nargin>2 && ~isempty(varargin{2})
-    mult=varargin{2};else mult=1;end
-    if nargin>3 && ~isempty(varargin{3})
-    plotting=varargin{3}; else plotting=0;end
-    if nargin>4 && ~isempty(varargin{4})
-    Fs=varargin{4};else Fs=1;end
-    if nargin>5 && ~isempty(varargin{5})
-    L=varargin{5}; else L=5;end
-    if nargin>6 && ~isempty(varargin{6})
-    wavename=varargin{6}; else wavename='coif5';end
-
-    if nargin>7 && ~isempty(varargin{7})
-        Report_all_wICA_info=varargin{7}; 
-    else Report_all_wICA_info='off';
-    end % NWB addition to optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category ('Report_all_wICA_info' if on)
-
+    %% NWB adjusted inputs:
+    type=RELAX_cfg.ICA_method;
+    mult=1;
+    plotting=0;
+    Fs=EEG.srate;
+    L=5;
+    wavename='coif5';
+    Report_all_wICA_info='off';
     fastica_symm_Didnt_Converge=[0 0 0]; % NWB addition to track whether fastica_symm doesn't converge
+    %%
 
     % run ICA using "runica" or "radical"
     if strcmp(type,'runica')
@@ -195,7 +185,20 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     [~, I]=max(OUTEEG.etc.ic_classification.ICLabel.classifications, [], 2);
     ICsMostLikelyNotBrain=(I>2)'; % Use ICLabel to detect artifacts except for muscle (detected below using RELAX_muscle_IC_detection)
     
-    [OUTEEG.icablinkmetricsout] = icablinkmetrics(OUTEEG); % Use icablinkmetrics to detect any blinks that ICLabel might have missed
+    % check if any of your blink electrodes are present:
+    BlinkElectrodes=[];
+    for b=1:size(RELAX_cfg.BlinkElectrodes,1) 
+        try 
+            BlinkElectrodes(1,size(BlinkElectrodes,2)+1)=find(ismember({OUTEEG.chanlocs.labels},RELAX_cfg.BlinkElectrodes(b))); 
+        catch
+        end
+    end
+    if exist('BlinkElectrodes')
+        [OUTEEG.icablinkmetricsout] = icablinkmetrics(OUTEEG,'ArtifactChannel', OUTEEG.data(BlinkElectrodes(1,1),:)); % Use icablinkmetrics to detect any blinks that ICLabel might have missed
+    elseif exist('BlinkElectrodes')==0
+        [OUTEEG.icablinkmetricsout] = icablinkmetrics(OUTEEG); % Use icablinkmetrics to detect any blinks that ICLabel might have missed, allowing the function to search for blink affected electrodes
+    end
+    
     if OUTEEG.icablinkmetricsout.identifiedcomponents>1
         ICsMostLikelyNotBrain(OUTEEG.icablinkmetricsout.identifiedcomponents)=1;
     end
