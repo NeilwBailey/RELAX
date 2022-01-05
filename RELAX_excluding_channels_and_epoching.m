@@ -408,7 +408,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
                 parfor trial=1:size(Muscle_Slopes,1)
                     powspctrm=squeeze(Muscle_Slopes(trial,chan,:))';
                     % Fit linear regression to log-log data
-                    p = polyfit(log(foi(1,:)),log(powspctrm(1,1:69)),1);
+                    p = polyfit(log(foi(1,:)),log(powspctrm(1,1:size(foi,2))),1);
                     % Store the slope
                     MuscleSlopesEpochsxChannels(chan,trial) = p(1);         
                 end
