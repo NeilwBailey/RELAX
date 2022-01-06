@@ -52,6 +52,21 @@ for x=1:numel(dirList)
         load('CleanedMetrics.mat');
     end
 end
+for x=1:numel(dirList)
+    if  strcmp(dirList(x).name,'ProcessingStatistics_wICA.mat')==1
+        load('ProcessingStatistics_wICA.mat');
+    end
+end
+for x=1:numel(dirList)
+    if  strcmp(dirList(x).name,'RELAX_issues_to_check.mat')==1
+        load('RELAX_issues_to_check.mat');
+    end
+end
+for x=1:numel(dirList)
+    if  strcmp(dirList(x).name,'RELAXProcessingExtremeRejectionsAllParticipants.mat')==1
+        load('RELAXProcessingExtremeRejectionsAllParticipants.mat');
+    end
+end
 
 %% Loop selected files in the directory list:
 for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
