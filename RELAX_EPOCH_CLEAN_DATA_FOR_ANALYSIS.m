@@ -23,7 +23,7 @@ clear all; close all; clc;
 % EEGLAB:
 % https://sccn.ucsd.edu/eeglab/index.php
 % Delorme, A., & Makeig, S. (2004). EEGLAB: an open source toolbox for analysis of single-trial EEG dynamics including independent component analysis. Journal of neuroscience methods, 134(1), 9-21.
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1');
+addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1');
 eeglab;
 
 % Fieldtrip:
@@ -186,12 +186,6 @@ for FileNumber=1:numel(RELAX_epoching_cfg.files)
     end
     EpochRejections(FileNumber,:) = struct2table(EEG.EpochRejections,'AsArray',true);
     
-    % If the ICA didn't converge when cleaning the data, a note is made
-    % here:
-    if isfield(EEG.RELAX, 'NonConvergence')
-        FilesWithoutConvergence{FileNumber}=FileName;
-    end
-
     %% Save data:
     SaveSetMWF2 =[RELAX_epoching_cfg.OutputPath filesep FileName '_Epoched.set'];    
     EEG = pop_saveset( EEG, SaveSetMWF2 );  
