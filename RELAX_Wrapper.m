@@ -515,10 +515,10 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R1(1,1)=isa(EEG.RELAXProcessingRoundOne.RankDeficiency,'char');
     end
     if RELAX_cfg.Do_MWF_Twice==1
-        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R2(1,1)=isa(EEG.RELAXProcessingRoundOne.RankDeficiency,'char');
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R2(1,1)=isa(EEG.RELAXProcessingRoundTwo.RankDeficiency,'char');
     end
     if RELAX_cfg.Do_MWF_Thrice==1
-        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R3(1,1)=isa(EEG.RELAXProcessingRoundOne.RankDeficiency,'char');
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R3(1,1)=isa(EEG.RELAXProcessingRoundThree.RankDeficiency,'char');
     end
     if RELAX_cfg.Perform_wICA_on_ICLabel==1
         if EEG.RELAXProcessing_wICA.Proportion_artifactICs_reduced_by_wICA>0.80
