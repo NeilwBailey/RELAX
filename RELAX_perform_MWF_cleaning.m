@@ -58,7 +58,7 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
     EEG.RELAXProcessing.DelayPeriod=NaN;
     
     %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED IN RELAX FUNCTIONS:
-    if EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal>0.05    
+    if EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal>0.025    
         [cleanEEG, d, W, SER, ARR] = mwf_process (EEG.data, EEG.RELAXProcessing.Details.NoiseMaskFullLength, RELAX_cfg.MWFDelayPeriod);
         EEG.RELAXProcessing.DelayPeriod=RELAX_cfg.MWFDelayPeriod;
         % If Generalized eigenvectors are not scaled as assumed, try again
@@ -87,6 +87,14 @@ function [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg)
             lastwarn('')
             [cleanEEG, d, W, SER, ARR] = mwf_process (EEG.data, EEG.RELAXProcessing.Details.NoiseMaskFullLength, (RELAX_cfg.MWFDelayPeriod-3));
             EEG.RELAXProcessing.DelayPeriod=RELAX_cfg.MWFDelayPeriod-3;
+        end
+        [warnmsg] = lastwarn;
+        if contains(warnmsg,pattern)
+            warning(['Trying again with a shorter delay period.',[]]);
+            clear warnmsg
+            lastwarn('')
+            [cleanEEG, d, W, SER, ARR] = mwf_process (EEG.data, EEG.RELAXProcessing.Details.NoiseMaskFullLength, (RELAX_cfg.MWFDelayPeriod-4));
+            EEG.RELAXProcessing.DelayPeriod=RELAX_cfg.MWFDelayPeriod-4;
         end
 
         EEG.data=cleanEEG; % Copy cleaned EEG data to the EEG struct
