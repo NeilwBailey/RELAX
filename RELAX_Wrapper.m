@@ -126,21 +126,22 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     % approaches).
     
     % de Cheveigné, A., & Arzounian, D. (2018). Robust detrending, rereferencing, outlier detection, and inpainting for multichannel data. NeuroImage, 172, 903-912.
-    
-    % Use TESA to apply butterworth filter: 
-%    EEG = pop_tesa_filtbutter( EEG, RELAX_cfg.LineNoiseFrequency-2, RELAX_cfg.LineNoiseFrequency+2, 4, 'bandstop' );
 
     %% Zap line instead of notch butter filter?
+    if strcmp(RELAX_cfg.NotchFilterType,'Zapline')
+        EEG.data = EEG.data-repmat(mean(EEG.data,2),[1 size(EEG.data,2)]); % DC correct (0 mean the data)
+        % parameters
+        FLINE=RELAX_cfg.LineNoiseFrequency/EEG.srate; % line frequency
+        NREMOVE=3; % number of components to remove. Suggested to be optimal between 2-4, might require testing for each individual dataset
+        settings.nkeep=30;
+        LineNoiseCleanedData=nt_zapline(EEG.data',FLINE,NREMOVE,settings);
+        EEG.data=LineNoiseCleanedData.';
+    end
+
+    if strcmp(RELAX_cfg.NotchFilterType,'Butterworth')
+        EEG = pop_tesa_filtbutter( EEG, RELAX_cfg.LineNoiseFrequency-2, RELAX_cfg.LineNoiseFrequency+2, 4, 'bandstop' );
+    end
     
-    EEG.data = EEG.data-repmat(mean(EEG.data,2),[1 size(EEG.data,2)]); % DC correct (0 mean the data)
-
-    % parameters
-    FLINE=RELAX_cfg.LineNoiseFrequency/EEG.srate; % line frequency
-    NREMOVE=3; % number of components to remove. Suggested to be optimal between 2-4, might require testing for each individual dataset
-    settings.nkeep=30;
-    LineNoiseCleanedData=nt_zapline(EEG.data',FLINE,NREMOVE,settings);
-    EEG.data=LineNoiseCleanedData.';
-
     EEG = pop_tesa_filtbutter( EEG, RELAX_cfg.HighPassFilter, RELAX_cfg.LowPassFilter, 4, 'bandpass' );
 
     %% Clean flat channels and bad channels showing improbable data:
@@ -479,14 +480,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
             end   
         end
     end
-    
-    %% SAVE FILE:
-    if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'], 'dir')
-        mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'])
-    end
-    SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep FileName '_RELAX.set'];    
-    EEG = pop_saveset( EEG, SaveSetMWF2 );  
-    
+
     %% Record warnings about potential issues:
     EEG.RELAX_issues_to_check.aFileName=cellstr(FileName);
     if size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2)>RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
@@ -529,6 +523,13 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         EEG.RELAX_issues_to_check.DataMaybeTooShortForValidICA = EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA;
         EEG.RELAX_issues_to_check.fastica_symm_Didnt_Converge=EEG.RELAXProcessing_wICA.fastica_symm_Didnt_Converge(1,3);
     end
+    
+    %% SAVE FILE:
+    if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'], 'dir')
+        mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'])
+    end
+    SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep FileName '_RELAX.set'];    
+    EEG = pop_saveset( EEG, SaveSetMWF2 );  
     
     % Record warnings for all participants in single table:
     RELAX_issues_to_check(FileNumber,:) = struct2table(EEG.RELAX_issues_to_check,'AsArray',true);
