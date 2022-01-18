@@ -16,6 +16,7 @@
 %% RELAX_Wrapper:
 function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
         RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg)
+
 % Load pre-processing statistics file for these participants if it already
 % exists (note that this can cause errors if the number of variables
 % inserted into the output table differs between participants, which can be
@@ -523,32 +524,47 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     RELAX_issues_to_check(FileNumber,:) = struct2table(EEG.RELAX_issues_to_check,'AsArray',true);
     
     %% Save statistics for each participant and across participants, graph cleaning metrics:
+    
+    % Also set empty output variables in case these are not produced because certain
+    % parameters have been switched off:
 
     savefileone=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'RELAXProcessingExtremeRejectionsAllParticipants'];
     save(savefileone,'RELAXProcessingExtremeRejectionsAllParticipants')
     if RELAX_cfg.Do_MWF_Once==1
         savefileone=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'ProcessingStatisticsRoundOne'];
         save(savefileone,'RELAXProcessingRoundOneAllParticipants')
+    else
+        RELAXProcessingRoundOneAllParticipants={};
     end
     if RELAX_cfg.Do_MWF_Twice==1
         savefiletwo=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'ProcessingStatisticsRoundTwo'];
         save(savefiletwo,'RELAXProcessingRoundTwoAllParticipants')
+    else
+        RELAXProcessingRoundTwoAllParticipants={};
     end
     if RELAX_cfg.Do_MWF_Thrice==1
         savefilethree=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'ProcessingStatisticsRoundThree'];
         save(savefilethree,'RELAXProcessingRoundThreeAllParticipants')
+    else
+        RELAXProcessingRoundThreeAllParticipants={};
     end
     if RELAX_cfg.Perform_wICA_on_ICLabel==1
         savefilefour=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'ProcessingStatistics_wICA'];
         save(savefilefour,'RELAXProcessing_wICA_AllParticipants')
+    else
+        RELAXProcessing_wICA_AllParticipants={}; 
     end
     if exist('CleanedMetrics','var')
         savemetrics=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'CleanedMetrics'];
         save(savemetrics,'CleanedMetrics')
+    else
+        CleanedMetrics={};
     end
     if exist('RawMetrics','var')
         savemetrics=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'RawMetrics'];
         save(savemetrics,'RawMetrics')
+    else
+        RawMetrics={};
     end
     if exist('RELAX_issues_to_check','var')
         savemetrics=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'RELAX_issues_to_check'];
