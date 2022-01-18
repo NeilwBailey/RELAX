@@ -1,4 +1,22 @@
-function [RELAX_cfg, result] = pop_RELAX(varargin)
+%% RELAX EEG CLEANING PIPELINE, Copyright (C) (2022) Neil Bailey
+
+%     This program is free software: you can redistribute it and/or modify
+%     it under the terms of the GNU General Public License as published by
+%     the Free Software Foundation, either version 3 of the License, or
+%     any later version.
+% 
+%     This program is distributed in the hope that it will be useful,
+%     but WITHOUT ANY WARRANTY; without even the implied warranty of
+%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%     GNU General Public License for more details.
+% 
+%     You should have received a copy of the GNU General Public License
+%     along with this program.  If not, see https://www.gnu.org/licenses/.
+
+%% pop_RELAX:
+% Clean data with RELAX via the EEGLAB gui:
+function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
+        RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = pop_RELAX(varargin)
 
 %% DEPENDENCIES (toolboxes you need to install, and cite if you use this script):
 % use fileseparators 'filesep' for increased compatability if necessary (replace the \ with a filesep [outside of quotes]) 
@@ -437,4 +455,7 @@ RELAX_cfg.saveround2=result{34};
 RELAX_cfg.saveround3=result{35};
 FilesToProcess=strsplit(strrep(result{36},',',''));
 RELAX_cfg.FilesToProcess=str2double(FilesToProcess(1,1)):str2double(FilesToProcess(1,2));
+
+[RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
+        RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg);
 
