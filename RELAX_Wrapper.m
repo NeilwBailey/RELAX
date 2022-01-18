@@ -14,7 +14,8 @@
 %     along with this program.  If not, see https://www.gnu.org/licenses/.
 
 %% RELAX_Wrapper:
-
+function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
+        RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg)
 % Load pre-processing statistics file for these participants if it already
 % exists (note that this can cause errors if the number of variables
 % inserted into the output table differs between participants, which can be
@@ -500,13 +501,13 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     end
     EEG.RELAX_issues_to_check.NoBlinksDetected=(EEG.RELAX.IQRmethodDetectedBlinks==0);
     if RELAX_cfg.Do_MWF_Once==1
-        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R1(1,1)=isa(EEG.RELAXProcessingRoundOne.RankDeficiency,'char');
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R1=isa(EEG.RELAXProcessingRoundOne.RankDeficiency,'char');
     end
     if RELAX_cfg.Do_MWF_Twice==1
-        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R2(1,1)=isa(EEG.RELAXProcessingRoundTwo.RankDeficiency,'char');
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R2=isa(EEG.RELAXProcessingRoundTwo.RankDeficiency,'char');
     end
     if RELAX_cfg.Do_MWF_Thrice==1
-        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R3(1,1)=isa(EEG.RELAXProcessingRoundThree.RankDeficiency,'char');
+        EEG.RELAX_issues_to_check.MWF_eigenvector_deficiency_R3=isa(EEG.RELAXProcessingRoundThree.RankDeficiency,'char');
     end
     if RELAX_cfg.Perform_wICA_on_ICLabel==1
         if EEG.RELAXProcessing_wICA.Proportion_artifactICs_reduced_by_wICA>0.80

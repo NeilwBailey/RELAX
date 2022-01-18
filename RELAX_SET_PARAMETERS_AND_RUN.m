@@ -123,7 +123,7 @@ eeglab;
 % Specify the MWF path:
 % https://github.com/exporl/mwf-artifact-removal
 % Somers, B., Francart, T., & Bertrand, A. (2018). A generic EEG artifact removal algorithm based on the multi-channel Wiener filter. Journal of neural engineering, 15(3), 036007.
-addpath(genpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1\plugins\mwf-artifact-removal-master'));
+addpath(genpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\mwf-artifact-removal-master'));
 
 % Fieldtrip:
 % http://www.fieldtriptoolbox.org/
@@ -141,7 +141,7 @@ addpath('C:\Program Files\MATLAB\fieldtrip-20180805');
 
 % fastica:
 % http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml 
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1\plugins\FastICA_25\');
+addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\FastICA_25\');
 
 % ICLabel in your eeglab folder as a plugin or via the github:
 % https://github.com/sccn/ICLabel
@@ -339,5 +339,6 @@ RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal informa
 %% RUN SCRIPT BELOW:
 RELAX_cfg.FilesToProcess=1:numel(RELAX_cfg.files); % Set which files to process
 
-RELAX_Wrapper;
+[RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
+        RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg);
 
