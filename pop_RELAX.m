@@ -21,11 +21,6 @@ function [RELAX_cfg, result] = pop_RELAX(varargin)
 % Robert Oostenveld, Pascal Fries, Eric Maris, and Jan-Mathijs Schoffelen. FieldTrip: Open Source Software for Advanced Analysis of MEG, EEG, and Invasive Electrophysiological Data. Computational Intelligence and Neuroscience, vol. 2011, Article ID 156869, 9 pages, 2011. doi:10.1155/2011/156869.
 % addpath('C:\Program Files\MATLAB\fieldtrip-20180805');
 
-% BLINKER to detect eyeblinks (install plugin to EEGLAB):
-% http://vislab.github.io/EEG-Blinks/
-% Kleifges, K., Bigdely-Shamlo, N., Kerick, S. E., & Robbins, K. A. (2017). BLINKER: Automated extraction of ocular indices from EEG enabling large-scale analysis. Frontiers in neuroscience, 11, 12.
-% Sometimes Blinker needs to be installed and unpacked from github rather than via EEGLAB if it doesn't work.
-
 % TESA for filtering (install plugin to EEGLAB):
 % https://github.com/nigelrogasch/TESA
 % Rogasch, N. C., Sullivan, C., Thomson, R. H., Rose, N. S., Bailey, N. W., Fitzgerald, P. B., ... & Hernandez-Pavon, J. C. (2017). Analysing concurrent transcranial magnetic stimulation and electroencephalographic data: A review and introduction to the open-source TESA software. Neuroimage, 147, 934-951.
@@ -47,10 +42,6 @@ function [RELAX_cfg, result] = pop_RELAX(varargin)
 
 % Specify  RELAX folder location (this toolbox):
 % addpath('D:\Data_Analysis\RELAX_v0_91\');
-
-% Cite muscle activity detection methods (the manuscript applied to ICA,
-% whereas this method applies them to single electrodes rather than ICA):
-% Fitzgibbon, S. P., DeLosAngeles, D., Lewis, T. W., Powers, D. M. W., Grummett, T. S., Whitham, E. M., ... & Pope, K. J. (2016). Automatic determination of EMG-contaminated components and validation of independent component analysis using EEG during pharmacologic paralysis. Clinical Neurophysiology, 127(3), 1781-1793.
 
 %% Location of files for processing
 
