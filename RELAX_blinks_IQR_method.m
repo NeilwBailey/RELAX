@@ -87,11 +87,15 @@ function [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, ep
     BlinkRunIndex = find(BlinkThresholdExceededLength>round(50/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
     % find latency of the max voltage within each period where the blink
     % threshold was exceeded:
-    for x=1:size(BlinkRunIndex,2)
-        o=ix_blinkstart(BlinkRunIndex(x));
-        c=ix_blinkend(BlinkRunIndex(x));
-        [~,I]=max(EEGEyeOnly.data(1,o:c),[],2);
-        BlinkMaxLatency(1,x)=o+I;
+    if size(BlinkRunIndex,2)>0
+        continuousEEG.RELAX.IQRmethodDetectedBlinks=1;
+        epochedEEG.RELAX.IQRmethodDetectedBlinks=1;
+        for x=1:size(BlinkRunIndex,2)
+            o=ix_blinkstart(BlinkRunIndex(x));
+            c=ix_blinkend(BlinkRunIndex(x));
+            [~,I]=max(EEGEyeOnly.data(1,o:c),[],2);
+            BlinkMaxLatency(1,x)=o+I;
+        end
     end
     %%
 

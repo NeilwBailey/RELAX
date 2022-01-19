@@ -142,7 +142,7 @@ addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\Fast
 % https://github.com/sccn/ICLabel
 
 % Specify  RELAX folder location (this toolbox):
-addpath('D:\Data_Analysis\RELAX_v0_91\');
+addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\RELAX_0.91\');
 
 % Specify your electrode locations with the correct cap file:
 RELAX_cfg.caploc='D:\Data_Analysis\Cap_Location_Files\standard-10-5-cap385.elp'; %path containing electrode positions
