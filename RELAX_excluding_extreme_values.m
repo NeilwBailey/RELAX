@@ -261,9 +261,17 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
     % Obtain a list of periods of start and end timepoints for the extreme
     % outlier periods. These are kept on record for deletion before the
     % wICA step (or before any analysis)
-    [~, ~, bi] = RunLength(epochedEEG.RELAX.NaNsForExtremeOutlierPeriods);
-    bi(1,(size(bi,2)+1))=size(epochedEEG.RELAX.NaNsForExtremeOutlierPeriods,2);
-    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion = reshape(bi,[2,(size(bi,2))/2])';
+    NaNList=EEG.RELAX.NaNsForExtremeOutlierPeriods;
+    NaNList(isnan(NaNList))=1;
+
+    ix_nanstart=find(diff(NaNList)==1)+1;  % indices where list goes from 0 to 1
+    ix_nanend=find(diff(NaNList)==-1);  % indices where list goes from 1 to 0
+    
+    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(:,2)=ix_nanend';
+    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(size(epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion,1)+1,2)=size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2);
+    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(1,1)=1;
+    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(2:1+size(ix_nanstart,2),1)=ix_nanstart';
+    
     epochedEEG.RELAX.ExtremelyBadPeriodsForDeletion=epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion;
     % Transfer details into continuousEEG struct also:
     continuousEEG.RELAXProcessing=epochedEEG.RELAXProcessing;
