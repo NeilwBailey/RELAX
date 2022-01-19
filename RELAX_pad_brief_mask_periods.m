@@ -60,26 +60,38 @@ function [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, type)
 
     % If an artifact has been marked as shorter than
     % MinimumArtifactDuration, then pad it out:
-    clear shortOneRunIndex; clear b; clear n; clear bi;
-    [b, n, bi] = RunLength(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
-    shortOneRunIndex = find(b==1 & n<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample));
+    clear shortOneRunIndex; clear OneRunLength; clear ix_artifactstart; clear ix_artifactend; clear ArtifactListNoNaNs;
+    ArtifactListNoNaNs=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
+    ArtifactListNoNaNs(isnan(ArtifactListNoNaNs))=0;
+
+    ix_artifactstart=find(diff(ArtifactListNoNaNs)==1)+1;  % indices where BlinkIndexMetric goes from 0 to 1
+    ix_artifactend=find(diff(ArtifactListNoNaNs)==-1);  % indices where BlinkIndexMetric goes from 1 to 0
+
+    OneRunLength=ix_artifactend-ix_artifactstart; % length of consecutive samples where blink threshold was exceeded
+    shortOneRunIndex = find(OneRunLength<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
+
     for ns = 1:size(shortOneRunIndex,2)
-        Start=(round((bi(shortOneRunIndex(ns))+bi(shortOneRunIndex(ns)+1))/2)-(MinimumArtifactDuration/2));
-        End=(round((bi(shortOneRunIndex(ns))+bi(shortOneRunIndex(ns)+1))/2)+(MinimumArtifactDuration/2));
+        Start=(round((ix_artifactstart(shortOneRunIndex(ns))+ix_artifactend(shortOneRunIndex(ns)))/2)-(MinimumArtifactDuration/2));
+        End=(round((ix_artifactstart(shortOneRunIndex(ns))+ix_artifactend(shortOneRunIndex(ns)))/2)+(MinimumArtifactDuration/2));
         EEG.RELAXProcessing.Details.NoiseMaskFullLength(Start:End)=1;
     end
     
     % If a clean patch lasts less the MinimumArtifactDuration and either side is marked as an artifact, 
     % close the two artifact markings on either side together:
-    clear shortZeroRunIndex; clear b; clear n; clear bi; clear Start; clear End;
-    [b, n, bi] = RunLength(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
-    shortZeroRunIndex = find(b==0 & n<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample));
+    clear shortZeroRunIndex; clear ZeroRunLength; clear ix_cleanstart; clear ix_cleanend; clear CleanListNoNaNs;
+    CleanListNoNaNs=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
+    CleanListNoNaNs(isnan(CleanListNoNaNs))=1;
+
+    ix_cleanstart=find(diff(CleanListNoNaNs)==-1)+1;  % indices where BlinkIndexMetric goes to 0
+    ix_cleanend=find(diff(CleanListNoNaNs)==1);  % indices where BlinkIndexMetric goes from 1 to 0
+
+    ZeroRunLength=ix_cleanend-ix_cleanstart; % length of consecutive samples where blink threshold was exceeded
+    shortZeroRunIndex = find(ZeroRunLength<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
+
     for ns = 1:size(shortZeroRunIndex,2)
-        if b(shortZeroRunIndex(ns)-1)==1 && b(shortZeroRunIndex(ns)+1)==1
-            Start=(round((bi(shortZeroRunIndex(ns))+bi(shortZeroRunIndex(ns)+1))/2)-(MinimumArtifactDuration/2));
-            End=(round((bi(shortZeroRunIndex(ns))+bi(shortZeroRunIndex(ns)+1))/2)+(MinimumArtifactDuration/2));
-            EEG.RELAXProcessing.Details.NoiseMaskFullLength(Start:End)=1;
-        end
+        Start=(round((ix_cleanstart(shortZeroRunIndex(ns))+ix_cleanend(shortZeroRunIndex(ns)))/2)-(MinimumArtifactDuration/2));
+        End=(round((ix_cleanstart(shortZeroRunIndex(ns))+ix_cleanend(shortZeroRunIndex(ns)))/2)+(MinimumArtifactDuration/2));
+        EEG.RELAXProcessing.Details.NoiseMaskFullLength(Start:End)=1;
     end
 
     % Combine the extreme period mask NaNs into the full noise mask again
@@ -92,10 +104,35 @@ function [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, type)
     end
 
     % If a patch still lasts less than minimum artifact duration, mark as NaNs:
-    clear shortRunIndex; clear b; clear n; clear bi;
-    [b, n, bi] = RunLength(EEG.RELAXProcessing.Details.NoiseMaskFullLength);
-    shortRunIndex = find(b<2 & n<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample));
-    for ns = 1:size(shortRunIndex,2)
-        EEG.RELAXProcessing.Details.NoiseMaskFullLength(bi(shortRunIndex(ns)):bi(shortRunIndex(ns)+1)-1) = NaN(1,bi(shortRunIndex(ns)+1)-(bi(shortRunIndex(ns))));
+    % If an artifact has been marked as shorter than
+    % MinimumArtifactDuration, then pad it out:
+    clear shortOneRunIndex; clear OneRunLength; clear ix_artifactstart; clear ix_artifactend; clear ArtifactListNoNaNs;
+    ArtifactListNoNaNs=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
+    ArtifactListNoNaNs(isnan(ArtifactListNoNaNs))=0;
+
+    ix_artifactstart=find(diff(ArtifactListNoNaNs)==1)+1;  % indices where BlinkIndexMetric goes from 0 to 1
+    ix_artifactend=find(diff(ArtifactListNoNaNs)==-1);  % indices where BlinkIndexMetric goes from 1 to 0
+
+    OneRunLength=ix_artifactend-ix_artifactstart; % length of consecutive samples where blink threshold was exceeded
+    shortOneRunIndex = find(OneRunLength<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
+
+    for ns = 1:size(shortOneRunIndex,2)
+        EEG.RELAXProcessing.Details.NoiseMaskFullLength(ix_artifactstart(shortOneRunIndex(1)):ix_artifactend(shortOneRunIndex(1))) = NaN;
+    end
+
+    % If a clean patch lasts less the MinimumArtifactDuration and either side is marked as an artifact, 
+    % close the two artifact markings on either side together:
+    clear shortZeroRunIndex; clear ZeroRunLength; clear ix_cleanstart; clear ix_cleanend; clear CleanListNoNaNs;
+    CleanListNoNaNs=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
+    CleanListNoNaNs(isnan(CleanListNoNaNs))=1;
+
+    ix_cleanstart=find(diff(CleanListNoNaNs)==-1)+1;  % indices where BlinkIndexMetric goes to 0
+    ix_cleanend=find(diff(CleanListNoNaNs)==1);  % indices where BlinkIndexMetric goes from 1 to 0
+
+    ZeroRunLength=ix_cleanend-ix_cleanstart; % length of consecutive samples where blink threshold was exceeded
+    shortZeroRunIndex = find(ZeroRunLength<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
+
+    for ns = 1:size(shortZeroRunIndex,2)
+        EEG.RELAXProcessing.Details.NoiseMaskFullLength(ix_cleanstart(shortZeroRunIndex(1)):ix_cleanend(shortZeroRunIndex(1))) = NaN;
     end
 end
