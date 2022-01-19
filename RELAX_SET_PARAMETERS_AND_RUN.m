@@ -141,14 +141,6 @@ addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\Fast
 % ICLabel in your eeglab folder as a plugin or via the github:
 % https://github.com/sccn/ICLabel
 
-% Need to install RunLength: https://au.mathworks.com/matlabcentral/fileexchange/41813-runlength?s_tid=mwa_osa_a
-% This can be tricky on a mac: you need to manually compile the 'RunLength' function as it wouldn't auto-install through the Matlab script. 
-% Macs have very tight security settings around MEX files. To get around this, install Xcode for Mac and then run the line of code to get it working
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\RunLength'); 
-
-% Need to install MinGW-w64 if on windows if you haven't already:
-% http://mingw-w64.org/doku.php
-
 % Specify  RELAX folder location (this toolbox):
 addpath('D:\Data_Analysis\RELAX_v0_91\');
 
