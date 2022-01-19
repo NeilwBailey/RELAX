@@ -268,7 +268,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
     ix_nanend=find(diff(NaNList)==-1);  % indices where list goes from 1 to 0
     
     epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(:,2)=ix_nanend';
-    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(size(epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion,1)+1,2)=size(EEG.RELAX.NaNsForExtremeOutlierPeriods,2);
+    epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(size(epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion,1)+1,2)=size(epochedEEG.RELAX.NaNsForExtremeOutlierPeriods,2);
     epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(1,1)=1;
     epochedEEG.RELAXProcessingExtremeRejections.ExtremelyBadPeriodsForDeletion(2:1+size(ix_nanstart,2),1)=ix_nanstart';
     
