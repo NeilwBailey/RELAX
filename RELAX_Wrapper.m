@@ -207,10 +207,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         EEG.RELAX.NoiseMaskFullLengthR1=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
         EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal=mean(EEG.RELAXProcessing.Details.NoiseMaskFullLength,'omitnan');
         EEG.RELAX.ProportionMarkedInMWFArtifactMaskTotalR1=EEG.RELAXProcessing.ProportionMarkedInMWFArtifactMaskTotal; 
-        
-        SaveSet_testing =[RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Extremes_Rejected', filesep FileName '_Extremes_Rejected_test.set'];    
-        EEG = pop_saveset( EEG, SaveSet_testing ); % If desired, save data here with bad channels deleted, filtering applied, extreme outlying data periods marked
-              
+  
         %% RUN MWF TO CLEAN DATA BASED ON MASKS CREATED ABOVE:
         [EEG] = RELAX_perform_MWF_cleaning (EEG, RELAX_cfg);          
 
