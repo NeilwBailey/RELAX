@@ -15,7 +15,7 @@
 
 %% pop_RELAX:
 % Clean data with RELAX via the EEGLAB gui:
-function [RELAX_cfg, result, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
+function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
         RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = pop_RELAX(RELAX_cfg)
 
 %% DEPENDENCIES (toolboxes you need to install, and cite if you use this script):
@@ -71,6 +71,13 @@ end
 if ~isfield(RELAX_cfg,'myPath')
     RELAX_cfg.myPath='D:\DATA_TO_BE_PREPROCESSED\';
 end
+
+eeglabPath = fileparts(which('eeglab'));
+MWFPluginPath=strcat(eeglabPath,'\plugins\mwf-artifact-removal-master\');
+if not(isfolder(MWFPluginPath))
+    warndlg('MWF toolbox not installed in EEGLAB plugins folder. Toolbox can be installed from: https://github.com/exporl/mwf-artifact-removal','MWF Cleaning Not Available');
+end
+addpath(genpath(MWFPluginPath));
 
 %% Parameters that can be specified:
 
