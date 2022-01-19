@@ -130,10 +130,6 @@ addpath(genpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plug
 % Robert Oostenveld, Pascal Fries, Eric Maris, and Jan-Mathijs Schoffelen. FieldTrip: Open Source Software for Advanced Analysis of MEG, EEG, and Invasive Electrophysiological Data. Computational Intelligence and Neuroscience, vol. 2011, Article ID 156869, 9 pages, 2011. doi:10.1155/2011/156869.
 addpath('C:\Program Files\MATLAB\fieldtrip-20180805');
 
-% TESA for filtering (install plugin to EEGLAB):
-% https://github.com/nigelrogasch/TESA
-% Rogasch, N. C., Sullivan, C., Thomson, R. H., Rose, N. S., Bailey, N. W., Fitzgerald, P. B., ... & Hernandez-Pavon, J. C. (2017). Analysing concurrent transcranial magnetic stimulation and electroencephalographic data: A review and introduction to the open-source TESA software. Neuroimage, 147, 934-951.
-
 % fastica:
 % http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml 
 addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\FastICA_25\');

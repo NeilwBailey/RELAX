@@ -62,7 +62,7 @@ function [continuousEEG, epochedEEG] = RELAX_drift(continuousEEG, epochedEEG, RE
     % Filter out the frequencies >5Hz to avoid marking high amplitude
     % alpha as drift (only implemented to detect drift, the output of this
     % script is not filtered differently to the input):
-    lowpassfilteredEEG = pop_tesa_filtbutter( epochedEEG, [], 5, 4, 'lowpass' );
+    lowpassfilteredEEG = RELAX_filtbutter( epochedEEG, [], 5, 4, 'lowpass' );
     Message = ['Filtering here only performed to better detect drift, output data will still be bandpass filtered from ', num2str(RELAX_cfg.HighPassFilter), ' to ', num2str(RELAX_cfg.LowPassFilter)];
     disp(Message);
     

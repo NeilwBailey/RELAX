@@ -52,7 +52,7 @@ function [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, ep
     Message = ['electrodes removed here only to average blink affected electrodes to enable blink detection, data still contains ', num2str(continuousEEG.nbchan), ' electrodes'];
     disp(Message);
     % Use TESA to apply butterworth filter: 
-    EEGEyeOnly = pop_tesa_filtbutter( EEGEyeOnly, 1, 25, 4, 'bandpass' );
+    EEGEyeOnly = RELAX_filtbutter( EEGEyeOnly, 1, 25, 4, 'bandpass' );
     Message = ['Filtering here only performed to better detect blinks, output data will still be bandpass filtered from ', num2str(RELAX_cfg.HighPassFilter), ' to ', num2str(RELAX_cfg.LowPassFilter)];
     disp(Message);
     % Make values in extreme outlying periods = 0 to help blink detection perform
