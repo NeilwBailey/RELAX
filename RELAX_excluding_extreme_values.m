@@ -261,7 +261,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_extreme_values(continuous
     % Obtain a list of periods of start and end timepoints for the extreme
     % outlier periods. These are kept on record for deletion before the
     % wICA step (or before any analysis)
-    NaNList=EEG.RELAX.NaNsForExtremeOutlierPeriods;
+    NaNList=epochedEEG.RELAX.NaNsForExtremeOutlierPeriods;
     NaNList(isnan(NaNList))=1;
 
     ix_nanstart=find(diff(NaNList)==1)+1;  % indices where list goes from 0 to 1
