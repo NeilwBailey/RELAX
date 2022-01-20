@@ -146,6 +146,9 @@ RELAX_cfg.caploc='D:\Data_Analysis\Cap_Location_Files\standard-10-5-cap385.elp';
 % Specify the to be processed file locations:
 RELAX_cfg.myPath='D:\DATA_TO_BE_PREPROCESSED\';
 
+% Or specify the single file to be processed:
+RELAX_cfg.filename=[]; % (including folder path)
+
 %% List all files in directory
 cd(RELAX_cfg.myPath);
 RELAX_cfg.dirList=dir('*.set');
@@ -264,6 +267,37 @@ RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the propo
 RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
 
 RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
+
+%% Check dependencies have been installed:
+
+toolboxlist=ver;
+if isempty(find(strcmp({toolboxlist.Name}, 'Signal Processing Toolbox')==1, 1))
+    warndlg('Signal Processing Toolbox not installed. Toolbox can be installed through MATLAB "Add-Ons" button','Signal Processing Toolbox not installed');
+end
+
+if isempty(find(strcmp({PLUGINLIST.plugin}, 'ICLabel')==1, 1))
+    warndlg('ICLabel not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','ICLabel not installed');
+end
+
+if isempty(find(strcmp({PLUGINLIST.plugin}, 'PrepPipeline')==1, 1))
+    warndlg('PrepPipeline not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','PrepPipeline not installed');
+end
+
+if isempty(find(strcmp({PLUGINLIST.plugin}, 'Fieldtrip-lite')==1, 1)) && (exist('ft_freqanalysis','file')==0)
+    warndlg('fieldtrip not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','fieldtrip not installed');
+end
+
+if (strcmp(RELAX_cfg.ICA_method,'fastica_symm')||strcmp(RELAX_cfg.ICA_method,'fastica_defl')) && isempty(find(strcmp({PLUGINLIST.plugin}, 'FastICA')==1, 1)) && (exist('fastica','file')==0) 
+    warndlg('FastICA not installed. Plugin can be installed from: http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml','FastICA not installed');
+end
+
+if (strcmp(RELAX_cfg.ICA_method,'cudaica')) && isempty(find(strcmp({PLUGINLIST.plugin}, 'CudaICA')==1, 1)) && (exist('cudaica','file')==0)
+    warndlg('CudaICA not installed. Instructions for installation can be found at: https://sccn.ucsd.edu/wiki/Makoto%27s_useful_EEGLAB_code. Warning - installation can be difficult','CudaICA not installed');
+end
+
+if (strcmp(RELAX_cfg.ICA_method,'amica')) && isempty(find(strcmp({PLUGINLIST.plugin}, 'AMICA')==1, 1)) && (exist('runamica15','file')==0)
+    warndlg('AMICA not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','AMICA not installed');
+end
 
 %% Notes on the above parameter settings:
 % OnlyIncludeTaskRelatedEpochs: this means the MWF cleaning templates 

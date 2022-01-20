@@ -13,17 +13,15 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see https://www.gnu.org/licenses/.
 
-%% pop_RELAX:
-% Clean data with RELAX via the EEGLAB gui:
+%% eegplugin_RELAX:
+% Add RELAX to the EEGLAB gui:
 function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
 
     vers = 'RELAX 0.91';
-    if nargin < 3
-        error('eegplugin_tesa requires 3 arguments');
+    if nargin < 2
+        error('eegplugin_RELAX requires 2 arguments');
     end
-    
-    % ERPLAB NEST-MENU  (ERPLAB at the EEGLAB's Main Menu)
-    %
+
     if ispc      % windows
             wfactor1 = 1.20;
             wfactor2 = 1.21;
@@ -41,23 +39,9 @@ function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
     set(hframe,'position', [posframe(1:2) posframe(3)*wfactor2 posframe(4)]);
 
     menuRELAX = findobj(fig,'tag','EEGLAB');   % At EEGLAB Main Menu
-    SignalProcessingToolboxCheck;
-    
+
     submenu = uimenu( menuRELAX,'Label','RELAX','separator','on','tag','RELAX','userdata','startup:on;continuous:on;epoch:on;study:on;erpset:on');
     
-%     ProcessDataMenu = uimenu( submenu,                              ...
-%     'Label'    , 'Preprocess EEG Data',               ...
-%     'tag'      , 'PreprocessContinuousEEGData',                 ... 
-%     'separator', 'on',                                      ...  
-%     'userdata' , [ ...
-%     'startup:on;'      ...
-%     'continuous:on;'    ...
-%     'epoch:on;'        ...
-%     'study:off;'        ...
-%     'erpset:off'        ]);
-%ProcessDataMenu = uimenu( submenu, 'Label', 'Preprocess EEG Data'  , 'CallBack', pop_RELAX, 'separator', 'on','startup:on;');
-%    uimenu( submenu, 'Label', 'Preprocess EEG Data'  , 'CallBack', pop_RELAX);
-
     % menu callbacks
         % --------------
     comProcessData = [try_strings.no_check...

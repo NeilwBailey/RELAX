@@ -70,9 +70,20 @@ for x=1:numel(dirList)
     end
 end
 
+if ~isempty(RELAX_cfg.filename)
+    RELAX_cfg.FilesToProcess = 1;
+    RELAX_cfg.SingleFile = 1; % 1 for single file
+else
+    RELAX_cfg.SingleFile = 0; % 0 for multiple files
+end
+
 %% Loop selected files in the directory list:
 for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
-    RELAX_cfg.filename=RELAX_cfg.files{FileNumber};
+    
+    if RELAX_cfg.SingleFile == 0
+        RELAX_cfg.filename=RELAX_cfg.files{FileNumber};
+    end
+    
     clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
     %% Load data (assuming the data is in EEGLAB .set format):
