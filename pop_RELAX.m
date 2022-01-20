@@ -15,7 +15,7 @@
 
 %% pop_RELAX:
 % Clean data with RELAX via the EEGLAB gui:
-function [RELAX_cfg, result, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
+function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
         RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = pop_RELAX(RELAX_cfg)
 
 %% DEPENDENCIES (toolboxes you need to install, and cite if you use this script):
