@@ -18,9 +18,6 @@
 function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
 
     vers = 'RELAX 0.91';
-    if nargin < 2
-        error('eegplugin_RELAX requires 2 arguments');
-    end
 
     if ispc      % windows
             wfactor1 = 1.20;
