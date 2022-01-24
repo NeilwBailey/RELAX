@@ -17,7 +17,7 @@
 % Add RELAX to the EEGLAB gui:
 function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
 
-    vers = 'RELAX 0.91';
+    vers = 'RELAX 1.0.0';
 
     if ispc      % windows
             wfactor1 = 1.20;
