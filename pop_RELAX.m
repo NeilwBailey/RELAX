@@ -534,40 +534,40 @@ end
 eeglabPath = fileparts(which('eeglab'));
 MWFPluginPath=strcat(eeglabPath,'\plugins\mwf-artifact-removal-master\');
 if not(isfolder(MWFPluginPath))
-    warndlg('MWF toolbox not installed in EEGLAB plugins folder. Toolbox can be installed from: https://github.com/exporl/mwf-artifact-removal','MWF Cleaning Not Available');
+    warndlg('MWF toolbox may not be installed in EEGLAB plugins folder. Toolbox can be installed from: https://github.com/exporl/mwf-artifact-removal','MWF Cleaning Not Available');
 end
 addpath(genpath(MWFPluginPath));
 
 toolboxlist=ver;
 if isempty(find(strcmp({toolboxlist.Name}, 'Signal Processing Toolbox')==1, 1))
-    warndlg('Signal Processing Toolbox not installed. Toolbox can be installed through MATLAB "Add-Ons" button','Signal Processing Toolbox not installed');
+    warndlg('Signal Processing Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Signal Processing Toolbox not installed');
 end
 
 PluginPath=strcat(eeglabPath,'\plugins\');
 PluginList=dir(PluginPath);
 
 if isempty(find(contains({PluginList.name}, 'ICLabel')==1, 1))
-    warndlg('ICLabel not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','ICLabel not installed');
+    warndlg('ICLabel may not be installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','ICLabel not installed');
 end
 
 if isempty(find(contains({PluginList.name}, 'PrepPipeline')==1, 1))
-    warndlg('PrepPipeline not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','PrepPipeline not installed');
+    warndlg('PrepPipeline may not be installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','PrepPipeline not installed');
 end
 
 if isempty(find(contains({PluginList.name}, 'Fieldtrip')==1, 1)) && (exist('ft_freqanalysis','file')==0)
-    warndlg('fieldtrip not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','fieldtrip not installed');
+    warndlg('fieldtrip may not be installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','fieldtrip not installed');
 end
 
 if (strcmp(RELAX_cfg.ICA_method,'fastica_symm')||strcmp(RELAX_cfg.ICA_method,'fastica_defl')) && isempty(find(contains({PluginList.name}, 'FastICA')==1, 1)) && (exist('fastica','file')==0) 
-    warndlg('FastICA not installed. Plugin can be installed from: http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml','FastICA not installed');
+    warndlg('FastICA may not be installed. Plugin can be installed from: http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml','FastICA not installed');
 end
 
 if (strcmp(RELAX_cfg.ICA_method,'cudaica')) && isempty(find(contains({PluginList.name}, 'CudaICA')==1, 1)) && (exist('cudaica','file')==0)
-    warndlg('CudaICA not installed. Instructions for installation can be found at: https://sccn.ucsd.edu/wiki/Makoto%27s_useful_EEGLAB_code. Warning - installation can be difficult','CudaICA not installed');
+    warndlg('CudaICA may not be installed. Instructions for installation can be found at: https://sccn.ucsd.edu/wiki/Makoto%27s_useful_EEGLAB_code. Warning - installation can be difficult','CudaICA not installed');
 end
 
 if (strcmp(RELAX_cfg.ICA_method,'amica')) && (exist('runamica15','file')==0) && isempty(find(contains({PluginList.name}, 'AMICA')==1, 1))
-    warndlg('AMICA not installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','AMICA not installed');
+    warndlg('AMICA may not be installed. Plugin can be installed via EEGLAB: "File" > "Manage EEGLAB Extensions"','AMICA not installed');
 end
 
 %%
