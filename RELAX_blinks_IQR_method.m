@@ -83,6 +83,8 @@ function [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, ep
     % exceeds the threshold:
     ix_blinkstart=find(diff(BlinkIndexMetric)==1)+1;  % indices where BlinkIndexMetric goes from 0 to 1
     ix_blinkend=find(diff(BlinkIndexMetric)==-1);  % indices where BlinkIndexMetric goes from 1 to 0
+    if ix_blinkend(1,1)<ix_blinkstart(1,1); ix_blinkend(:,1)=[]; end % if the first downshift occurs before the upshift, remove the first value in end
+    if ix_blinkend(1,size(ix_blinkend,2))<ix_blinkstart(1,size(ix_blinkstart,2)); ix_blinkstart(:,size(ix_blinkstart,2))=[];end % if the last upshift occurs after the last downshift, remove the last value in start
     BlinkThresholdExceededLength=ix_blinkend-ix_blinkstart; % length of consecutive samples where blink threshold was exceeded
     BlinkRunIndex = find(BlinkThresholdExceededLength>round(50/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
     % find latency of the max voltage within each period where the blink

@@ -82,8 +82,8 @@ function [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, type)
     CleanListNoNaNs=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
     CleanListNoNaNs(isnan(CleanListNoNaNs))=1;
 
-    ix_cleanstart=find(diff(CleanListNoNaNs)==-1)+1;  % indices where BlinkIndexMetric goes to 0
-    ix_cleanend=find(diff(CleanListNoNaNs)==1);  % indices where BlinkIndexMetric goes from 1 to 0
+    ix_cleanstart=find(diff(CleanListNoNaNs)==-1)+1;  % indices where BlinkIndexMetric goes from 1 to 0
+    ix_cleanend=find(diff(CleanListNoNaNs)==1);  % indices where BlinkIndexMetric goes from 0 to 1
 
     ZeroRunLength=ix_cleanend-ix_cleanstart; % length of consecutive samples where blink threshold was exceeded
     shortZeroRunIndex = find(ZeroRunLength<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
@@ -126,8 +126,8 @@ function [EEG] = RELAX_pad_brief_mask_periods (EEG, RELAX_cfg, type)
     CleanListNoNaNs=EEG.RELAXProcessing.Details.NoiseMaskFullLength;
     CleanListNoNaNs(isnan(CleanListNoNaNs))=1;
 
-    ix_cleanstart=find(diff(CleanListNoNaNs)==-1)+1;  % indices where BlinkIndexMetric goes to 0
-    ix_cleanend=find(diff(CleanListNoNaNs)==1);  % indices where BlinkIndexMetric goes from 1 to 0
+    ix_cleanstart=find(diff(CleanListNoNaNs)==-1)+1;  % indices where BlinkIndexMetric goes from 1 to 0
+    ix_cleanend=find(diff(CleanListNoNaNs)==1);  % indices where BlinkIndexMetric goes from 0 to 1
 
     ZeroRunLength=ix_cleanend-ix_cleanstart; % length of consecutive samples where blink threshold was exceeded
     shortZeroRunIndex = find(ZeroRunLength<round(MinimumArtifactDuration/RELAX_cfg.ms_per_sample)); % find locations where blink threshold was exceeded by more than 50ms
