@@ -35,6 +35,7 @@ addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\Fiel
 addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\RELAX-1.0.0\');
 
 % Specify rejection parameters:
+RELAX_epoching_cfg.InterpolateRejectedChannels='yes';
 RELAX_epoching_cfg.SingleChannelImprobableDataThreshold=5; %MAD from the median of all epochs for each electrode against itself. This could be set lower and would catch less severe pops
 RELAX_epoching_cfg.AllChannelImprobableDataThreshold=3; %SD from the mean of all epochs for each electrode against itself. This could be set lower and would catch less severe improbable data
 RELAX_epoching_cfg.SingleChannelKurtosisThreshold=5; % SD from the mean of the single electrodes. This could be set lower and would catch less severe kurtosis 
@@ -49,14 +50,20 @@ RELAX_epoching_cfg.MaxProportionOfMuscleEpochsToClean=0.50; % Maximum proportion
 RELAX_epoching_cfg.RemoveEpochsShowingMuscleActivity='yes'; % 'yes' or 'no'
 
 RELAX_epoching_cfg.DataType='Task'; % 'Task' for cognitive tasks, 'Resting' for data without stimuli presented
+RELAX_epoching_cfg.restingdatatriggerinterval=3.5; % (seconds) sets how often an 'X' trigger is inserted into resting data for epoching. 3.5 with [-2.5 2.5] PeriodToEpoch provides 5s epochs with 1.5s overlaps
+RELAX_epoching_cfg.TriggersToEpoch={'HappyGo' 'HappyNogo' 'SadGo' 'SadNogo' }; % triggers to use for epoching
+RELAX_epoching_cfg.PeriodToEpoch=[-0.5 1.0]; % [start end] surrounding trigger
+RELAX_epoching_cfg.RemoveOtherTriggers='yes'; % 'yes'|'no' - removes all other triggers except the trigger used for timelocking the epoch
 
 % Baseline correct the data?
-RELAX_epoching_cfg.Perform_BL_Correction='yes'; % 'yes' or 'no'
+RELAX_epoching_cfg.BL_correction_method='regression'; % Set type of baseline correction to perform ('regression' = recommended, 'subtraction' = traditional but not recommended)
 RELAX_epoching_cfg.BLperiod=[-200 0]; % Set baseline period for baseline correction of data to reduce potential influence of drift
+RELAX_epoching_cfg.NumberOfFactors=2;
+RELAX_epoching_cfg.BL_correction_Factor_1_Level_1={'HappyGo' 'SadGo' }; % triggers to include in factor 1's level 1 for regression BL correction (all other triggers are included in factor 1's level 2)
+RELAX_epoching_cfg.BL_correction_Factor_2_Level_1={'HappyGo' 'HappyNogo' }; % triggers to include in factor 2's level 1 for regression BL correction (all other triggers are included in factor 2's level 2)
 
 % Specify the to be processed file locations:
-RELAX_epoching_cfg.myPath='D:\DATA_TO_BE_PREPROCESSED\';
-RELAX_epoching_cfg.CleanedPath=[RELAX_epoching_cfg.myPath filesep 'RELAXProcessed' filesep 'Cleaned_Data'];
+RELAX_epoching_cfg.CleanedPath=['D:\DATA_TO_BE_PREPROCESSED' filesep 'RELAXProcessed' filesep 'Cleaned_Data'];
 
 % Load pre-processing statistics file for these participants if it already
 % exists:
@@ -71,178 +78,9 @@ if isempty(RELAX_epoching_cfg.files)
     disp('No files found..')
 end
 
-%% Loop over each file in your list 
-for FileNumber=1:numel(RELAX_epoching_cfg.files)
-    RELAX_epoching_cfg.filename=RELAX_epoching_cfg.files{FileNumber};
-    clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'FileNumber' 'FileName' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections';
-    %% Load data (assuming the data is in EEGLAB .set format):
-    EEG = pop_loadset(RELAX_epoching_cfg.filename);
-    FileName = extractBefore(RELAX_epoching_cfg.files{FileNumber},".");
-    Participant_IDs{1,FileNumber} = extractBefore(RELAX_epoching_cfg.files{FileNumber},".");
-    EEG.RELAXProcessing.ChannelsRemaining=EEG.nbchan;
+%% RUN SCRIPT BELOW:
+RELAX_epoching_cfg.FilesToProcess=1:numel(RELAX_epoching_cfg.files); % Set which files to process
 
-    %% Interpolate channels that were excluded back into the data:
-    EEG = pop_interp(EEG, EEG.allchan, 'spherical');
-
-    % Record how many channels had to be interpolated back into the data after cleaning:
-    EEG.RELAXProcessing.TotalChannels=EEG.nbchan;
-    EEG.RELAXProcessing.ProportionOfChannelsInterpolated=(EEG.RELAXProcessing.TotalChannels-EEG.RELAXProcessing.ChannelsRemaining)/EEG.RELAXProcessing.TotalChannels;
-
-    %% Epoch Data:
+[OutlierParticipantsToManuallyCheck,EpochRejections,RELAX_epoching_cfg] = RELAX_epoch_clean_data_Wrapper(RELAX_epoching_cfg);
     
-    % If resting data, you can use this to insert triggers at a specified
-    % interval and then epoch data around triggers
-    % (this example creates 5 second epochs with 1.5 second overlaps):
- 
-    if strcmp(RELAX_epoching_cfg.DataType,'Resting')==1
-        restingdatatriggerinterval=3.5;
-        EEG=eeg_regepochs(EEG,'recurrence',restingdatatriggerinterval,'eventtype','X','extractepochs','off');      
-        EEG = pop_epoch( EEG, { 'X'}, [-2.5 2.5], 'epochinfo', 'yes');
-    end
-     
-    % If cognitive data with triggers embedded, this epochs data from -0.5 to 1 seconds and deletes triggers other than the epoched trigger within each epoch. Example below with an emotional Go Nogo task:  
-    if strcmp(RELAX_epoching_cfg.DataType,'Task')
-        EEG = pop_epoch( EEG, {'HappyGo' 'HappyNogo' 'SadGo' 'SadNogo' }, [-0.5 1.0], 'epochinfo', 'yes');
-        % Remove triggers that are in the epoch, but aren't the trigger
-        % the data is being epoched around (this can be helpful if epoching
-        % data separately by condition following this script):
-        EEG = pop_selectevent( EEG, 'omitlatency', '-1001<=-1','type', {'HappyGo' 'HappyNogo' 'SadGo' 'SadNogo' }, 'deleteevents','on');
-        EEG = pop_selectevent( EEG, 'omitlatency', '1<=1999','type', {'HappyGo' 'HappyNogo' 'SadGo' 'SadNogo' }, 'deleteevents','on');
-    end
-    EEG = eeg_checkset( EEG );
-
-    %% Baseline Correct Data:
-    
-    if strcmp(RELAX_epoching_cfg.Perform_BL_Correction,'yes')
-
-        % Regression based baseline correction method (recommended):
-        [EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_epoching_cfg,'Factor_1_Level_1', {'HappyGo' 'SadGo' }, 'Factor_2_Level_1', {'HappyGo' 'HappyNogo' }); 
-        % if a 2 x 2 design, this will code triggers other than 'HappyGo'/'SadGo' as -1, and Go as 1 in the first factor, and triggers other than 'HappyGo'/'HappyNogo' as -1 in the second factor
-        
-        %[EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_epoching_cfg,'Factor_1_Level_1',{'Go'}); if a 2 condition design, this will code triggers other than 'Go' as -1, and Go as 1
-        %[EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_epoching_cfg); % if only 1 stimulus condition present for each participant
-        
-        % (the benefits of this method are explained in Alday, 2019, and the specific implementation performed in Bailey et al. 2022)
-        % Alday, P. M. (2019). How much baseline correction do we need in ERP research? Extended GLM model can replace baseline correction while lifting its limits. Psychophysiology, 56(12), e13451.
-        % Bailey et al. (2022). Meditators probably show increased behaviour-monitoring related neural activity. 
-        
-        % Note that for designs with more than 3 conditions for a single
-        % factor, linear mixed modelling to baseline correct the data is more
-        % appropriate (not provided here).
-
-        % Also note that the method provided below is effective for 
-        % nice clean data with a larger number of epochs per participant,
-        % but for data that is not clean or very few epochs per participant (<5 is my guess) 
-        % then a method that includes all participants in the single regression 
-        % and includes individual as a factor is more appropriate.
-        
-        % Traditional subtraction based baseline correction (not recommended):
-        % EEG = pop_rmbase( EEG, [RELAX_epoching_cfg.BLperiod]);
-        
-    end
- 
-    %% THIS SECTION CONTAINS FUNCTIONS WHICH DETECT AND REJECT ARTIFACTS
-
-    % Count initial epochs:
-    EEG.RELAXProcessing.InitialEpochs=size(EEG.data,3);
-
-    % Any one of these functions can be commented out to ignore those artifacts
-    % when creating the mask:
-
-    % This section uses traditional amplitude, improbable voltage distributions within epochs, and kurtosis to reject epochs:
-    ROIidx= 1:EEG.nbchan; 
-    EEG = pop_eegthresh(EEG,1,[ROIidx],[-RELAX_epoching_cfg.reject_amp],[RELAX_epoching_cfg.reject_amp],[EEG.xmin],[EEG.xmax],1,0);
-    EEG = pop_jointprob(EEG,1,[ROIidx],RELAX_epoching_cfg.SingleChannelImprobableDataThreshold,RELAX_epoching_cfg.AllChannelImprobableDataThreshold,1,0);
-    EEG = pop_rejkurt(EEG,1,(1:EEG.nbchan),RELAX_epoching_cfg.SingleChannelKurtosisThreshold,RELAX_epoching_cfg.AllChannelKurtosisThreshold,1,0);
-    EEG = eeg_rejsuperpose(EEG, 1, 0, 1, 1, 1, 1, 1, 1);
-    EEG = pop_rejepoch(EEG, [EEG.reject.rejglobal] ,0);
-        
-    %% If you have not filtered out data below 75Hz, you could use an objective muscle slope measure to reject epochs with remaining muscle activity:   
-    % Use epoched data and FFT to detect slope of log frequency log
-    % power, add periods exceeding muscle threshold to mask. This method is
-    % designed for use with data that includes up to 75Hz, so  is not
-    % useful if frequencies below 75Hz are filtered out
-
-    if strcmp(RELAX_epoching_cfg.RemoveEpochsShowingMuscleActivity,'yes')
-        [EEG] = RELAX_Rejecting_muscle_epochs(EEG, RELAX_epoching_cfg);
-    end
-    
-    %% CHECK MEDIAN VOLTAGE SHIFT IN EACH EPOCH FOR EACH PARTICIPANT, AND RECORD ARTIFACT REJECTION DETAILS
-    % The following measures the median size of the voltage shift in each epoch
-    % for each participant. Used at the end of this script to provide
-    % advice on which participants to manually check as potential bad
-    % data:        
-    voltageshiftwithinepoch=range(EEG.data(:,:,:),2);
-    Medianvoltageshiftwithinepoch(:,FileNumber)=median(voltageshiftwithinepoch,3);
-    EEG.RELAXProcessing.EpochsRemaining=size(EEG.data,3);
-    EEG.RELAXProcessing.ProportionOfEpochsRejected=(EEG.RELAXProcessing.InitialEpochs-EEG.RELAXProcessing.EpochsRemaining)/EEG.RELAXProcessing.InitialEpochs;
-    EEG.RELAXProcessing.aFileName=FileName;
-
-     % Order the MWF Processing statistics structure in alphabetical order:
-    [~, neworder] = sort(lower(fieldnames(EEG.RELAXProcessing)));
-    EEG.EpochRejections = orderfields(EEG.RELAXProcessing, neworder);
-    if isfield(EEG.EpochRejections, 'NaNsForExtremeOutlierPeriods')
-        EEG.EpochRejections=rmfield(EEG.EpochRejections,'NaNsForExtremeOutlierPeriods');
-    end
-    EpochRejections(FileNumber,:) = struct2table(EEG.EpochRejections,'AsArray',true);
-    
-    %% Save data:
-    SaveSetMWF2 =[RELAX_epoching_cfg.OutputPath filesep FileName '_Epoched.set'];    
-    EEG = pop_saveset( EEG, SaveSetMWF2 );  
-end
-
-%% The following checks for participants who show outlying values for the median voltage shift within each epoch:
-% The following detects outlier files in the median amount of their max-min
-% voltage shift within an epoch, after adjusting for the fact that the data
-% across all participants is likely to be positively skewed with a log transform.
-MedianvoltageshiftwithinepochLogged=log10(Medianvoltageshiftwithinepoch);
-InterQuartileRange=iqr(MedianvoltageshiftwithinepochLogged,2);
-Upper25 = prctile(MedianvoltageshiftwithinepochLogged,75,2);
-Lower25 = prctile(MedianvoltageshiftwithinepochLogged,25,2);
-
-% 75th% and 25th% +/- (1.5 x IQR) is the recommended outlier detection method, 
-% so this is used to recommend which participants to manually check
-% However, I find this can be a bit too sensitive upon manual inspection,
-% and that 1.75, 2, or even 2.5 can be a better threshold.
-LowerBound=size(MedianvoltageshiftwithinepochLogged,1);
-UpperBound=size(MedianvoltageshiftwithinepochLogged,1);
-for x=1:size(MedianvoltageshiftwithinepochLogged,1)
-    LowerBound(x,1)=Lower25(x,1)-(2*InterQuartileRange(x,1));
-    UpperBound(x,1)=Upper25(x,1)+(2*InterQuartileRange(x,1));
-end
-
-VoltageShiftsTooLow=MedianvoltageshiftwithinepochLogged;
-VoltageShiftsTooLow=VoltageShiftsTooLow-LowerBound;
-VoltageShiftsTooLow(0<VoltageShiftsTooLow)=0;
-CumulativeSeverityOfAmplitudesBelowThreshold=sum(VoltageShiftsTooLow,1)';
-
-VoltageShiftsTooHigh=MedianvoltageshiftwithinepochLogged;
-VoltageShiftsTooHigh=VoltageShiftsTooHigh-UpperBound;
-VoltageShiftsTooHigh(0>VoltageShiftsTooHigh)=0;
-CumulativeSeverityOfAmplitudesAboveThreshold=sum(VoltageShiftsTooHigh,1)';
-
-% Plot:
-plot(LowerBound); hold on; plot(UpperBound); 
-% for c=1:size(EEG.chanlocs,2); electrode{c}=EEG.chanlocs(c).labels;end
-hold on; plot(MedianvoltageshiftwithinepochLogged); xticks([1:1:60]);xticklabels({EEG.chanlocs.labels});legend('LowerBound', 'UpperBound');
-
-OutlierParticipantsToManuallyCheck = table(Participant_IDs', CumulativeSeverityOfAmplitudesBelowThreshold,CumulativeSeverityOfAmplitudesAboveThreshold);
-
-savefileone=[RELAX_epoching_cfg.myPath 'RELAXProcessed' filesep 'OutlierParticipantsToManuallyCheck'];
-save(savefileone,'OutlierParticipantsToManuallyCheck')
- 
-savefileone=[RELAX_epoching_cfg.myPath 'RELAXProcessed' filesep 'EpochRejections'];
-save(savefileone,'EpochRejections')
-
-LoggedMedianVoltageShiftAcrossEpochs=array2table(MedianvoltageshiftwithinepochLogged);
-LoggedMedianVoltageShiftAcrossEpochs.Properties.VariableNames =Participant_IDs';
-for c=1:size(EEG.chanlocs,2); chanlist{c}=EEG.chanlocs(c).labels; end
-LoggedMedianVoltageShiftAcrossEpochs.Properties.RowNames =chanlist;
-savefileone=[RELAX_epoching_cfg.myPath 'RELAXProcessed' filesep 'LoggedMedianVoltageShiftAcrossEpochs'];
-save(savefileone,'LoggedMedianVoltageShiftAcrossEpochs')
-
-savefileone=[RELAX_epoching_cfg.myPath 'RELAXProcessed' filesep 'RELAX_epoching_cfg'];
-save(savefileone,'RELAX_epoching_cfg')
-
-clearvars -except 'OutlierParticipantsToManuallyCheck' 'RELAX_epoching_cfg' 'EpochRejections' 'EpochRejectionStats' 'FilesWithoutConvergence' 'LoggedMedianVoltageShiftAcrossEpochs';
         

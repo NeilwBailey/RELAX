@@ -48,4 +48,13 @@ function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
         % -------------------------   
     uimenu( submenu, 'Label', 'Preprocess EEG Data'  , 'CallBack', comProcessData);
     
+    % menu callbacks
+        % --------------
+    comEpochData = [try_strings.no_check...
+        '[OutlierParticipantsToManuallyCheck,EpochRejections,RELAX_epoching_cfg] = pop_RELAX_epoch_the_clean_data();'...
+        catch_strings.add_to_hist];
+     % create menus
+        % -------------------------   
+    uimenu( submenu, 'Label', 'Epoch Data, Reject Bad Epochs and BL Correct EEG Data'  , 'CallBack', comEpochData);
+    
 end

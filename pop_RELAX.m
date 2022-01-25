@@ -25,33 +25,22 @@ function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoun
 % MATLAB statistics and machine learning toolbox (from MATLAB website)
 
 % PREP pipeline to reject bad electrodes (install plugin to EEGLAB, or via the github into the EEGLAB plugin folder): 
-% https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4471356/
 % Bigdely-Shamlo, N., Mullen, T., Kothe, C., Su, K. M., & Robbins, K. A. (2015). The PREP pipeline: standardized preprocessing for large-scale EEG analysis. Frontiers in neuroinformatics, 9, 16.
 % http://vislab.github.io/EEG-Clean-Tools/ or install via EEGLAB extensions
 
 % Specify the MWF path:
 % https://github.com/exporl/mwf-artifact-removal
 % Somers, B., Francart, T., & Bertrand, A. (2018). A generic EEG artifact removal algorithm based on the multi-channel Wiener filter. Journal of neural engineering, 15(3), 036007.
-% addpath(genpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1\plugins\mwf-artifact-removal-master'));
 
 % Fieldtrip:
 % http://www.fieldtriptoolbox.org/
 % Robert Oostenveld, Pascal Fries, Eric Maris, and Jan-Mathijs Schoffelen. FieldTrip: Open Source Software for Advanced Analysis of MEG, EEG, and Invasive Electrophysiological Data. Computational Intelligence and Neuroscience, vol. 2011, Article ID 156869, 9 pages, 2011. doi:10.1155/2011/156869.
-% addpath('C:\Program Files\MATLAB\fieldtrip-20180805');
-
-% TESA for filtering (install plugin to EEGLAB):
-% https://github.com/nigelrogasch/TESA
-% Rogasch, N. C., Sullivan, C., Thomson, R. H., Rose, N. S., Bailey, N. W., Fitzgerald, P. B., ... & Hernandez-Pavon, J. C. (2017). Analysing concurrent transcranial magnetic stimulation and electroencephalographic data: A review and introduction to the open-source TESA software. Neuroimage, 147, 934-951.
 
 % fastica:
 % http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml 
-% addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_current\eeglab2019_1\plugins\FastICA_25\');
 
 % ICLabel in your eeglab folder as a plugin or via the github:
 % https://github.com/sccn/ICLabel
-
-% Specify  RELAX folder location (this toolbox):
-% addpath('D:\Data_Analysis\RELAX_v0_91\');
 
 % Check if input is provided:
 if nargin == 0
