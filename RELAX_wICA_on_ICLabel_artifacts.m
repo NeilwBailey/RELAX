@@ -282,7 +282,7 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     
     EEG.RELAXProcessing_wICA.Proportion_artifactICs_reduced_by_wICA=mean(ICsMostLikelyNotBrain);
     
-    if strcmp(Report_all_wICA_info,'Report_all_wICA_info')
+    if strcmp(Report_all_wICA_info,'yes')
     
         EEG.RELAXProcessing_wICA.ProportionICs_was_Brain=sum(I==1)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);
         EEG.RELAXProcessing_wICA.ProportionICs_was_Muscle=sum(I==2)/size(OUTEEG.etc.ic_classification.ICLabel.classifications,1);

@@ -190,7 +190,9 @@ RELAX_cfg.Do_MWF_Once=1; % 1 = Perform the MWF cleaning a second time (1 for yes
 RELAX_cfg.Do_MWF_Twice=1; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no).
 RELAX_cfg.Do_MWF_Thrice=1; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no). I think cleaning drift in this is a good idea.
 RELAX_cfg.Perform_wICA_on_ICLabel=1; % 1 = Perform wICA on artifact components marked by ICLabel (1 for yes, 0 for no).
+RELAX_cfg.Perform_ICA_subtract=0; % 1 = Perform ICA subtract on artifact components marked by ICLabel (1 for yes, 0 for no) (non-optimal, intended to be optionally used separately to wICA rather than additionally)
 RELAX_cfg.ICA_method='fastica_symm';
+RELAX_cfg.Report_all_ICA_info='no'; % set to yes to provide detailed report of ICLabel artifact information. Runs ~20s slower per file.
 
 RELAX_cfg.computerawmetrics=1; % Compute blink and muscle metrics from the raw data?
 RELAX_cfg.computecleanedmetrics=1; % Compute SER, ARR, blink and muscle metrics from the cleaned data?
@@ -360,8 +362,8 @@ end
 % Fitzgibbon, S. P., DeLosAngeles, D., Lewis, T. W., Powers, D. M. W., Grummett, T. S., Whitham, E. M., ... & Pope, K. J. (2016). Automatic determination of EMG-contaminated components and validation of independent component analysis using EEG during pharmacologic paralysis. Clinical Neurophysiology, 127(3), 1781-1793.
 
 %% RUN SCRIPT BELOW:
-RELAX_cfg.FilesToProcess=1:numel(RELAX_cfg.files); % Set which files to process
+RELAX_cfg.FilesToProcess=1;%:numel(RELAX_cfg.files); % Set which files to process
 
 [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
-        RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg);
+        RELAXProcessing_ICA_AllParticipants, RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg);
 

@@ -16,7 +16,7 @@
 %% pop_RELAX:
 % Clean data with RELAX via the EEGLAB gui:
 function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
-        RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = pop_RELAX(RELAX_cfg)
+        RELAXProcessing_ICA_AllParticipants, RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = pop_RELAX(RELAX_cfg)
 
 %% DEPENDENCIES (toolboxes you need to install, and cite if you use this script):
 % use fileseparators 'filesep' for increased compatability if necessary (replace the \ with a filesep [outside of quotes]) 
@@ -101,8 +101,14 @@ end
 if ~isfield(RELAX_cfg,'Perform_wICA_on_ICLabel')
     RELAX_cfg.Perform_wICA_on_ICLabel=1; % 1 = Perform wICA on artifact components marked by ICLabel (1 for yes, 0 for no).
 end
+if ~isfield(RELAX_cfg,'Perform_ICA_subtract')
+    RELAX_cfg.Perform_ICA_subtract=0; % 1 = Perform ICA subtract on artifact components marked by ICLabel (1 for yes, 0 for no) (non-optimal, intended to be optionally used separately to wICA rather than additionally)
+end
 if ~isfield(RELAX_cfg,'ICA_method')
     RELAX_cfg.ICA_method='fastica_symm';
+end
+if ~isfield(RELAX_cfg,'Report_all_ICA_info')
+    RELAX_cfg.Report_all_ICA_info='no'; % set to yes to provide detailed report of ICLabel artifact information. Runs ~20s slower per file.
 end
 if ~isfield(RELAX_cfg,'computerawmetrics')
     RELAX_cfg.computerawmetrics=1; % Compute blink and muscle metrics from the raw data?
@@ -324,6 +330,7 @@ commandload3 = [ '[filetoprocess file_path] = uigetfile(''*.set'', ''Select the 
     'clear filetoprocess tagtest;' ];
 
 % ICA options
+wICA_or_ICA={'Reduce ICA artifacts with wICA','Subtract ICA artifacts','No ICA artifact reduction'};
 icaOptions = {'runica','cudaica','fastica_symm','fastica_defl','amica'};
 ProbabilityOfBlinksOptions = {'data almost certainly has blinks', 'data might not have blinks', 'data definitely does not have blinks'};
 
@@ -344,7 +351,7 @@ geometry = {[0.5 1.0 0.2 1.0 1.0 0.2] ... % setting directory / file to process
             1 ...
             [0.6 0.2 0.6 0.4 0.4 0.6 1]... %Wiener filter settings 
             1 ...
-            [0.6 0.4 0.6 1]... % wICA settings 
+            [0.6 0.6 0.4 0.8]... % wICA settings 
             1 ...
             [0.9 1 1 0.7 1]... % Blink probability and electrode options
             1 ...
@@ -416,10 +423,10 @@ uilist = {{'style', 'text', 'string', 'Raw data folder:','fontweight','bold','fo
           {'Style', 'checkbox', 'string' 'HEOG/drift' 'value' RELAX_cfg.Do_MWF_Thrice 'tag' 'thrice' ,'fontsize', 9} ... % Input 3; Line 2
           {'style', 'text', 'string', ' ','fontsize', 9} ...
           {}...
-          {'Style', 'checkbox', 'string' 'Clean with wICA' 'value' RELAX_cfg.Perform_wICA_on_ICLabel 'tag' 'wICA' ,'fontsize', 9,'fontweight','bold'} ... % Input 1
+          {'style', 'text', 'string', 'Clean Artifacts with ICA?','fontsize', 9} ...
+          {'style', 'popupmenu', 'string', wICA_or_ICA, 'tag', 'wICA_or_ICAOpts','Value',3,'fontsize', 9} ...
           {'style', 'text', 'string', 'ICA method:','fontsize', 9} ...
           {'style', 'popupmenu', 'string', icaOptions, 'tag', 'icaOpts','Value',3,'fontsize', 9} ...
-          {'style', 'text', 'string', '','fontsize', 9}...
           {} ...
           {'style', 'text', 'string', 'Does the data contain blinks?','fontweight','bold','fontsize', 9} ...
           {'style', 'popupmenu', 'string', ProbabilityOfBlinksOptions, 'tag', 'blinkOpts','Value',1,'fontsize', 9} ...
@@ -493,6 +500,7 @@ RELAX_cfg.Do_MWF_Once=result{18}; % 1 = Perform the MWF cleaning a second time (
 RELAX_cfg.Do_MWF_Twice=result{19}; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no).
 RELAX_cfg.Do_MWF_Thrice=result{20};
 RELAX_cfg.Perform_wICA_on_ICLabel=result{21};
+RELAX_cfg.Perform_ICA_subtract=result{21}-1;
 RELAX_cfg.ICA_method = icaOptions{result{22}};
 RELAX_cfg.ProbabilityDataHasNoBlinks=(result{23})-1;
 RELAX_cfg.BlinkElectrodes= strtrim(strsplit(strrep(result{24},',','')))';
@@ -578,20 +586,21 @@ if ~isfield(RELAX_cfg,'FilesToProcess')
 end
 
 [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
-       RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg);
+        RELAXProcessing_ICA_AllParticipants, RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg);
    
 if RELAX_cfg.HighPassFilter>0.25
     Warning='You have high pass filtered above 0.25, which can adversely affect ERP analyses';
 end
 
 % To enable debugging if necessary:
-% 
+
 % FileNumber={}; 
 % CleanedMetrics={};
 % RawMetrics={};
 % RELAXProcessingRoundOneAllParticipants={};
 % RELAXProcessingRoundTwoAllParticipants={};
 % RELAXProcessing_wICA_AllParticipants={};
+% RELAXProcessing_ICA_AllParticipants={};
 % RELAXProcessingRoundThreeAllParticipants={};
 % RELAX_issues_to_check={};
 % RELAXProcessingExtremeRejectionsAllParticipants={};

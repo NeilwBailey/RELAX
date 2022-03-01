@@ -15,7 +15,7 @@
 
 %% RELAX_Wrapper:
 function [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
-        RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg)
+        RELAXProcessing_ICA_AllParticipants, RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper (RELAX_cfg)
 
 % Load pre-processing statistics file for these participants if it already
 % exists (note that this can cause errors if the number of variables
@@ -60,6 +60,11 @@ for x=1:numel(dirList)
     end
 end
 for x=1:numel(dirList)
+    if  strcmp(dirList(x).name,'ProcessingStatistics_ICA.mat')==1
+        load('ProcessingStatistics_ICA.mat');
+    end
+end
+for x=1:numel(dirList)
     if  strcmp(dirList(x).name,'RELAX_issues_to_check.mat')==1
         load('RELAX_issues_to_check.mat');
     end
@@ -85,7 +90,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     end
     
     clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
-        'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
+        'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
     %% Load data (assuming the data is in EEGLAB .set format):
     
     cd(RELAX_cfg.myPath);
@@ -431,13 +436,26 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         % also seems to be comparable (or only slightly worse) than
         % extended infomax (run via cudaICA for speed).
         EEG.RELAXProcessing_wICA.aFileName=cellstr(FileName);
-        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,RELAX_cfg.ICA_method, 1, 0, EEG.srate, 5,'coif5'); 
+        [EEG,~, ~, ~, ~] = RELAX_wICA_on_ICLabel_artifacts(EEG,RELAX_cfg.ICA_method, 1, 0, EEG.srate, 5,'coif5',RELAX_cfg.Report_all_ICA_info); 
         % adding 'Report_all_wICA_info' to the end of the parameters specified will optionally report proportion of ICs categorized as each category, and variance explained by ICs from each category (function is ~20s slower if this is implemented)
         EEG = eeg_checkset( EEG );
 
         RELAXProcessing_wICA=EEG.RELAXProcessing_wICA;
         % Record processing statistics for all participants in single table:
         RELAXProcessing_wICA_AllParticipants(FileNumber,:) = struct2table(RELAXProcessing_wICA,'AsArray',true);
+    end
+    
+    %% Perform ICA subtract on ICLabel identified artifacts that remain:
+    if RELAX_cfg.Perform_ICA_subtract==1
+        % The following performs ICA sutraction, implemented on only the components
+        % marked as artifact by ICLabel.
+        EEG.RELAXProcessing_ICA.aFileName=cellstr(FileName);
+        EEG = RELAX_ICA_subtract(EEG,RELAX_cfg);
+        EEG = eeg_checkset( EEG );
+
+        RELAXProcessing_ICA=EEG.RELAXProcessing_ICA;
+        % Record processing statistics for all participants in single table:
+        RELAXProcessing_ICA_AllParticipants(FileNumber,:) = struct2table(RELAXProcessing_ICA,'AsArray',true);
     end
     
     EEG.RELAX.Data_has_been_cleaned=1;
@@ -523,12 +541,22 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         EEG.RELAX_issues_to_check.DataMaybeTooShortForValidICA = EEG.RELAXProcessing_wICA.DataMaybeTooShortForValidICA;
         EEG.RELAX_issues_to_check.fastica_symm_Didnt_Converge=EEG.RELAXProcessing_wICA.fastica_symm_Didnt_Converge(1,3);
     end
+    if RELAX_cfg.Perform_ICA_subtract==1
+        if EEG.RELAXProcessing_ICA.Proportion_artifactICs_reduced_by_ICA>0.80
+            EEG.RELAX_issues_to_check.HighProportionOfArtifact_ICs=EEG.RELAXProcessing_ICA.Proportion_artifactICs_reduced_by_ICA;
+        else
+            EEG.RELAX_issues_to_check.HighProportionOfArtifact_ICs=0;
+        end
+        EEG.RELAX_issues_to_check.DataMaybeTooShortForValidICA = EEG.RELAXProcessing_ICA.DataMaybeTooShortForValidICA;
+        EEG.RELAX_issues_to_check.fastica_symm_Didnt_Converge=EEG.RELAXProcessing_ICA.fastica_symm_Didnt_Converge(1,3);
+    end
     
     %% SAVE FILE:
     if ~exist([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'], 'dir')
         mkdir([RELAX_cfg.myPath, filesep 'RELAXProcessed' filesep 'Cleaned_Data'])
     end
-    SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep FileName '_RELAX.set'];    
+    SaveSetMWF2 =[RELAX_cfg.myPath,filesep 'RELAXProcessed' filesep 'Cleaned_Data', filesep FileName '_RELAX.set'];  
+    EEG.RELAX_settings_used_to_clean_this_file=RELAX_cfg;
     EEG = pop_saveset( EEG, SaveSetMWF2 ); 
     
     % Record warnings for all participants in single table:
@@ -564,6 +592,12 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         save(savefilefour,'RELAXProcessing_wICA_AllParticipants')
     else
         RELAXProcessing_wICA_AllParticipants={}; 
+    end
+    if RELAX_cfg.Perform_ICA_subtract==1
+        savefilefour=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'ProcessingStatistics_ICA'];
+        save(savefilefour,'RELAXProcessing_ICA_AllParticipants')
+    else
+        RELAXProcessing_ICA_AllParticipants={}; 
     end
     if exist('CleanedMetrics','var')
         savemetrics=[RELAX_cfg.myPath filesep 'RELAXProcessed' filesep 'CleanedMetrics'];
@@ -614,7 +648,7 @@ if exist('CleanedMetrics','var')
 end
 
 clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
-        'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
+        'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
     
 warning('Check "RELAX_issues_to_check" to see if any issues were noted for specific files');
 
