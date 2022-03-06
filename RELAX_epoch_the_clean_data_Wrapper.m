@@ -25,12 +25,13 @@ mkdir(RELAX_epoching_cfg.OutputPath);
 for FileNumber=RELAX_epoching_cfg.FilesToProcess(1,1:size(RELAX_epoching_cfg.FilesToProcess,2))
     
     RELAX_epoching_cfg.filename=RELAX_epoching_cfg.files{FileNumber};
-    clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'FileNumber' 'FileName' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections';
+    clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'FileNumber' 'FileName' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections' 'MatCompatible_Participant_IDs';
     %% Load data (assuming the data is in EEGLAB .set format):
     EEG = pop_loadset(RELAX_epoching_cfg.filename);
     FileName = extractBefore(RELAX_epoching_cfg.files{FileNumber},".");
     Participant_IDs{1,FileNumber} = extractBefore(RELAX_epoching_cfg.files{FileNumber},".");
-    EEG.RELAXProcessing.ChannelsRemaining=EEG.nbchan;
+    MatCompatible_Participant_IDs{1,FileNumber}=strcat('ID_',Participant_IDs{1,FileNumber});
+    EEG.EpochRejections.ChannelsRemaining=EEG.nbchan;
 
     %% Interpolate channels that were excluded back into the data:
     if strcmp(RELAX_epoching_cfg.InterpolateRejectedChannels,'yes')
@@ -38,8 +39,8 @@ for FileNumber=RELAX_epoching_cfg.FilesToProcess(1,1:size(RELAX_epoching_cfg.Fil
     end
 
     % Record how many channels had to be interpolated back into the data after cleaning:
-    EEG.RELAXProcessing.TotalChannels=EEG.nbchan;
-    EEG.RELAXProcessing.ProportionOfChannelsInterpolated=(EEG.RELAXProcessing.TotalChannels-EEG.RELAXProcessing.ChannelsRemaining)/EEG.RELAXProcessing.TotalChannels;
+    EEG.EpochRejections.TotalChannels=EEG.nbchan;
+    EEG.EpochRejections.ProportionOfChannelsInterpolated=(EEG.EpochRejections.TotalChannels-EEG.EpochRejections.ChannelsRemaining)/EEG.EpochRejections.TotalChannels;
 
     %% Epoch Data:
     
@@ -111,7 +112,7 @@ for FileNumber=RELAX_epoching_cfg.FilesToProcess(1,1:size(RELAX_epoching_cfg.Fil
     %% THIS SECTION CONTAINS FUNCTIONS WHICH DETECT AND REJECT ARTIFACTS
 
     % Count initial epochs:
-    EEG.RELAXProcessing.InitialEpochs=size(EEG.data,3);
+    EEG.EpochRejections.InitialEpochs=size(EEG.data,3);
 
     % Any one of these functions can be commented out to ignore those artifacts
     % when creating the mask:
@@ -143,18 +144,19 @@ for FileNumber=RELAX_epoching_cfg.FilesToProcess(1,1:size(RELAX_epoching_cfg.Fil
         voltageshiftwithinepoch=range(EEG.data(:,:,:),2);
         Medianvoltageshiftwithinepoch(:,FileNumber)=median(voltageshiftwithinepoch,3);
     end
-    EEG.RELAXProcessing.EpochsRemaining=size(EEG.data,3);
-    EEG.RELAXProcessing.ProportionOfEpochsRejected=(EEG.RELAXProcessing.InitialEpochs-EEG.RELAXProcessing.EpochsRemaining)/EEG.RELAXProcessing.InitialEpochs;
-    EEG.RELAXProcessing.aFileName=FileName;
+    EEG.EpochRejections.EpochsRemaining=size(EEG.data,3);
+    EEG.EpochRejections.ProportionOfEpochsRejected=(EEG.EpochRejections.InitialEpochs-EEG.EpochRejections.EpochsRemaining)/EEG.EpochRejections.InitialEpochs;
+    EEG.EpochRejections.aFileName=FileName;
 
      % Order the MWF Processing statistics structure in alphabetical order:
-    [~, neworder] = sort(lower(fieldnames(EEG.RELAXProcessing)));
-    EEG.EpochRejections = orderfields(EEG.RELAXProcessing, neworder);
+    [~, neworder] = sort(lower(fieldnames(EEG.EpochRejections)));
+    EEG.EpochRejections = orderfields(EEG.EpochRejections, neworder);
     if isfield(EEG.EpochRejections, 'NaNsForExtremeOutlierPeriods')
         EEG.EpochRejections=rmfield(EEG.EpochRejections,'NaNsForExtremeOutlierPeriods');
     end
     EpochRejections(FileNumber,:) = struct2table(EEG.EpochRejections,'AsArray',true);
     
+    EEG.RELAX_settings_used_to_epoch_this_file=RELAX_epoching_cfg;
     %% Save data:
     SaveSetMWF2 =[RELAX_epoching_cfg.OutputPath filesep FileName '_Epoched.set'];    
     EEG = pop_saveset( EEG, SaveSetMWF2 );  
@@ -200,9 +202,9 @@ if strcmp(RELAX_epoching_cfg.InterpolateRejectedChannels,'yes')
 
     savefileone=[RELAX_epoching_cfg.OutputPath filesep 'OutlierParticipantsToManuallyCheck'];
     save(savefileone,'OutlierParticipantsToManuallyCheck')
-    
+
     LoggedMedianVoltageShiftAcrossEpochs=array2table(MedianvoltageshiftwithinepochLogged);
-    LoggedMedianVoltageShiftAcrossEpochs.Properties.VariableNames =Participant_IDs';
+    LoggedMedianVoltageShiftAcrossEpochs.Properties.VariableNames =MatCompatible_Participant_IDs';
     for c=1:size(EEG.chanlocs,2); chanlist{c}=EEG.chanlocs(c).labels; end
     LoggedMedianVoltageShiftAcrossEpochs.Properties.RowNames =chanlist;
     savefileone=[RELAX_epoching_cfg.OutputPath filesep 'LoggedMedianVoltageShiftAcrossEpochs'];
