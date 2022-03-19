@@ -57,4 +57,22 @@ function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
         % -------------------------   
     uimenu( submenu, 'Label', 'Epoch Data, Reject Bad Epochs and BL Correct EEG Data'  , 'CallBack', comEpochData);
     
+    % menu callbacks
+        % --------------
+    comHelpMenu = [try_strings.no_check...
+        '[RELAX_wiki_website] = pop_RELAX_help();'...
+        catch_strings.add_to_hist];
+     % create menus
+        % -------------------------   
+    uimenu( submenu, 'Label', 'Help'  , 'CallBack', comHelpMenu);
+    
+    % menu callbacks
+        % --------------
+    comCitationDetails = [try_strings.no_check...
+        '[RELAX_citation] = pop_RELAX_citation();'...
+        catch_strings.add_to_hist];
+     % create menus
+        % -------------------------   
+    uimenu( submenu, 'Label', 'Citing RELAX'  , 'CallBack', comCitationDetails);
+    
 end
