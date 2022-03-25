@@ -21,11 +21,17 @@ function [OutlierParticipantsToManuallyCheck,EpochRejections,RELAX_epoching_cfg]
 RELAX_epoching_cfg.OutputPath=[RELAX_epoching_cfg.CleanedPath filesep 'Epoched'];
 mkdir(RELAX_epoching_cfg.OutputPath);
 
+WarningAboutFileNumber=0;
+if size(RELAX_epoching_cfg.FilesToProcess,2) > size(RELAX_epoching_cfg.files,2)
+    RELAX_epoching_cfg.FilesToProcess=RELAX_epoching_cfg.FilesToProcess(1,1):size(RELAX_epoching_cfg.files,2);
+    WarningAboutFileNumber=1;
+end
+
 %% Loop selected files in the directory list:
 for FileNumber=RELAX_epoching_cfg.FilesToProcess(1,1:size(RELAX_epoching_cfg.FilesToProcess,2))
     
     RELAX_epoching_cfg.filename=RELAX_epoching_cfg.files{FileNumber};
-    clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'FileNumber' 'FileName' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections' 'MatCompatible_Participant_IDs';
+    clearvars -except 'FilesWithoutConvergence' 'RELAX_epoching_cfg' 'FileNumber' 'FileName' 'Participant_IDs' 'Medianvoltageshiftwithinepoch' 'EpochRejections' 'MatCompatible_Participant_IDs' 'WarningAboutFileNumber';
     %% Load data (assuming the data is in EEGLAB .set format):
     EEG = pop_loadset(RELAX_epoching_cfg.filename);
     FileName = extractBefore(RELAX_epoching_cfg.files{FileNumber},".");
@@ -204,7 +210,13 @@ if strcmp(RELAX_epoching_cfg.InterpolateRejectedChannels,'yes')
     save(savefileone,'OutlierParticipantsToManuallyCheck')
 
     LoggedMedianVoltageShiftAcrossEpochs=array2table(MedianvoltageshiftwithinepochLogged);
+    
+    MissingLabels=find(cellfun(@isempty,MatCompatible_Participant_IDs));
+    for x=1:size(MissingLabels,2)
+        MatCompatible_Participant_IDs{1,MissingLabels(x)}='NotEpoched';
+    end
     LoggedMedianVoltageShiftAcrossEpochs.Properties.VariableNames =MatCompatible_Participant_IDs';
+    
     for c=1:size(EEG.chanlocs,2); chanlist{c}=EEG.chanlocs(c).labels; end
     LoggedMedianVoltageShiftAcrossEpochs.Properties.RowNames =chanlist;
     savefileone=[RELAX_epoching_cfg.OutputPath filesep 'LoggedMedianVoltageShiftAcrossEpochs'];
@@ -218,5 +230,9 @@ save(savefileone,'EpochRejections')
 
 savefileone=[RELAX_epoching_cfg.OutputPath filesep 'RELAX_epoching_cfg'];
 save(savefileone,'RELAX_epoching_cfg')
+
+if WarningAboutFileNumber==1
+    warning('You instructed RELAX to epoch more files than were in your data folder. Check all your expected files were there?');
+end
 
 clearvars -except 'OutlierParticipantsToManuallyCheck' 'RELAX_epoching_cfg' 'EpochRejections' 'EpochRejectionStats' 'FilesWithoutConvergence' 'LoggedMedianVoltageShiftAcrossEpochs';

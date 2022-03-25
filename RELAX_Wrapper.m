@@ -82,15 +82,21 @@ else
     RELAX_cfg.SingleFile = 0; % 0 for multiple files
 end
 
+WarningAboutFileNumber=0;
+if size(RELAX_cfg.FilesToProcess,2) > size(RELAX_cfg.files,2)
+    RELAX_cfg.FilesToProcess=RELAX_cfg.FilesToProcess(1,1):size(RELAX_cfg.files,2);
+    WarningAboutFileNumber=1;
+end
+
 %% Loop selected files in the directory list:
 for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     
     if RELAX_cfg.SingleFile == 0
         RELAX_cfg.filename=RELAX_cfg.files{FileNumber};
     end
-    
+
     clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
-        'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
+        'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants' 'WarningAboutFileNumber';
     %% Load data (assuming the data is in EEGLAB .set format):
     
     cd(RELAX_cfg.myPath);
@@ -650,9 +656,12 @@ if exist('CleanedMetrics','var')
 end
 
 clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
-        'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants';
+        'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants' 'WarningAboutFileNumber';
     
 warning('Check "RELAX_issues_to_check" to see if any issues were noted for specific files');
+if WarningAboutFileNumber==1
+    warning('You instructed RELAX to clean more files than were in your data folder. Check all your expected files were there?');
+end
 
 toc
 %% POTENTIAL IMPROVEMENTS THAT COULD BE MADE:
