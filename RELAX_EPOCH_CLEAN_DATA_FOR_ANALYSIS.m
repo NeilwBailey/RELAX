@@ -32,7 +32,7 @@ eeglab;
 addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\Fieldtrip-lite20210601');
 
 % Specify  RELAX folder location (this toolbox):
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\RELAX-1.0.0\');
+addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\RELAX-1.0.1\');
 
 % Specify rejection parameters:
 RELAX_epoching_cfg.InterpolateRejectedChannels='yes';
