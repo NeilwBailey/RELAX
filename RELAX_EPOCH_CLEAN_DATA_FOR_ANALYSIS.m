@@ -81,6 +81,6 @@ end
 %% RUN SCRIPT BELOW:
 RELAX_epoching_cfg.FilesToProcess=1:numel(RELAX_epoching_cfg.files); % Set which files to process
 
-[OutlierParticipantsToManuallyCheck,EpochRejections,RELAX_epoching_cfg] = RELAX_epoch_clean_data_Wrapper(RELAX_epoching_cfg);
+[OutlierParticipantsToManuallyCheck,EpochRejections,RELAX_epoching_cfg] = RELAX_epoch_the_clean_data_Wrapper(RELAX_epoching_cfg);
     
         

@@ -104,8 +104,10 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     EEG.RELAX.Data_has_been_cleaned=0;
     RELAX_cfg.ms_per_sample=(1000/EEG.srate);
 
-    %% Select channels     
-    EEG=pop_chanedit(EEG,  'lookup', RELAX_cfg.caploc);
+    %% Select channels 
+    if ~isempty(RELAX_cfg.caploc)
+        EEG=pop_chanedit(EEG,  'lookup', RELAX_cfg.caploc);
+    end
     
     %% Delete channels that are not relevant if present       
     EEG=pop_select(EEG,'nochannel',RELAX_cfg.ElectrodesToDelete);

@@ -66,7 +66,7 @@ function [Regression_BL_Corrected_EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_e
     % number of columns in the "confounds" variable by 1.
 
     % 2nd column codes for emotion, 3rd for Go/Nogo, 1st column will include mean baseline voltage for regressing this out of the data
-    for e=1:size(EEG.event,2) % for each event:
+    for e=1:size(EEG.data,3) % for each event:
         confounds(e,1)=0;
         if Factor1_present==1
             if contains(EEG.event(e).type,Factor_1_Level_1_Codes)==1 

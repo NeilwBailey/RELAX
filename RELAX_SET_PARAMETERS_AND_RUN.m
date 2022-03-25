@@ -141,7 +141,7 @@ addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\Fast
 addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\RELAX-1.0.0\');
 
 % Specify your electrode locations with the correct cap file:
-RELAX_cfg.caploc='D:\Data_Analysis\Cap_Location_Files\standard-10-5-cap385.elp'; %path containing electrode positions
+RELAX_cfg.caploc='D:\Data_Analysis\Cap_Location_Files\standard-10-5-cap385.elp'; % path containing electrode positions. Set to =[] if electrode locations are already in your EEG file.
 
 % Specify the to be processed file locations:
 RELAX_cfg.myPath='D:\DATA_TO_BE_PREPROCESSED\';
