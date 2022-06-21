@@ -17,7 +17,7 @@
 % Add RELAX to the EEGLAB gui:
 function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
 
-    vers = 'RELAX 1.0.1';
+    vers = 'RELAX 1.1.0';
 
     if ispc      % windows
             wfactor1 = 1.20;
@@ -47,6 +47,15 @@ function vers = eegplugin_RELAX(fig, try_strings, catch_strings)
      % create menus
         % -------------------------   
     uimenu( submenu, 'Label', 'Preprocess EEG Data'  , 'CallBack', comProcessData);
+    
+    % menu callbacks
+        % --------------
+    comProcessData_beta = [try_strings.no_check...
+        '[RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants, RELAXProcessing_ICA_AllParticipants, RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = pop_RELAX_beta();'...
+        catch_strings.add_to_hist];
+     % create menus
+        % -------------------------   
+    uimenu( submenu, 'Label', 'Preprocess EEG Data (beta version)'  , 'CallBack', comProcessData_beta);
     
     % menu callbacks
         % --------------

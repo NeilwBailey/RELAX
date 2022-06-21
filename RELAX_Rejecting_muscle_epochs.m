@@ -28,11 +28,11 @@ function [EEG] = RELAX_Rejecting_muscle_epochs(EEG, RELAX_epoching_cfg)
     % so this less stringent setting ensures no epochs that are not
     % affected by muscle are rejected
         end
-        if isfield(RELAX_epoching_cfg, 'MaxProportionOfDataCanBeMarkedAsMuscle')==0
-            RELAX_epoching_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50; % maximum that can be deleted for showing muscle slopes
+        if isfield(RELAX_epoching_cfg, 'MaxProportionOfMuscleEpochsToClean')==0
+            RELAX_epoching_cfg.MaxProportionOfMuscleEpochsToClean=0.50; % maximum that can be deleted for showing muscle slopes
         end
     elseif exist('RELAX_epoching_cfg', 'var')==0
-        RELAX_epoching_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=0.50;  
+        RELAX_epoching_cfg.MaxProportionOfMuscleEpochsToClean=0.50;  
         RELAX_epoching_cfg.MuscleSlopeThreshold=-0.31;
     end
     
@@ -95,10 +95,10 @@ function [EEG] = RELAX_Rejecting_muscle_epochs(EEG, RELAX_epoching_cfg)
     EEG.RELAXProcessing.ProportionOfEpochsShowingMuscleActivityTotal = mean(EEG.RELAXProcessing.Details.HighMuscleMask,'omitnan');
 
     %% Checks the proportion of muscle artifact epochs selected, and reduces the threshold for rejection of an epoch if above the threshold were selected for rejection:
-    PercentThresholdAboveWhichToIncludeAsArtifactInMask=100-(RELAX_epoching_cfg.MaxProportionOfDataCanBeMarkedAsMuscle*100);
+    PercentThresholdAboveWhichToIncludeAsArtifactInMask=100-(RELAX_epoching_cfg.MaxProportionOfMuscleEpochsToClean*100);
 
     EEG.RELAXProcessing.Details.MuscleSlopeThresholdBasedOnPercentToReject={};
-    if EEG.RELAXProcessing.ProportionOfEpochsShowingMuscleActivityTotal > RELAX_epoching_cfg.MaxProportionOfDataCanBeMarkedAsMuscle
+    if EEG.RELAXProcessing.ProportionOfEpochsShowingMuscleActivityTotal > RELAX_epoching_cfg.MaxProportionOfMuscleEpochsToClean
         EEG.RELAXProcessing.Details.MuscleSlopeThresholdBasedOnPercentToReject = prctile(EEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochsBestToWorst,PercentThresholdAboveWhichToIncludeAsArtifactInMask);
         EEG.RELAXProcessing.Details.HighMuscleMask=EEG.RELAXProcessing.Details.SortingOutWorstMuscleEpochs;
         EEG.RELAXProcessing.Details.HighMuscleMask(EEG.RELAXProcessing.Details.HighMuscleMask <= EEG.RELAXProcessing.Details.MuscleSlopeThresholdBasedOnPercentToReject) = 0; 

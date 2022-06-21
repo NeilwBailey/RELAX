@@ -149,12 +149,34 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     % deficiencies, demonstrating the benefits of using these methods to
     % avoid adding temporal dependencies to the data, unlike filtering
     % approaches).
+    % UPDATE: it seems to be the low pass filter that creates the temporal
+    % dependencies to the data, resulting in rank deficiencies. When data
+    % is not low pass filtered prior to MWF cleaning, delay periods up to
+    % 30 are possible (and low pass filtering can be applied prior to the
+    % wICA cleaning).
     
     % de Cheveigné, A., & Arzounian, D. (2018). Robust detrending, rereferencing, outlier detection, and inpainting for multichannel data. NeuroImage, 172, 903-912.
     
-    % Use TESA to apply butterworth filter: 
-    EEG = RELAX_filtbutter( EEG, RELAX_cfg.LineNoiseFrequency-3, RELAX_cfg.LineNoiseFrequency+3, 2, 'bandstop' );
-    EEG = RELAX_filtbutter( EEG, RELAX_cfg.HighPassFilter, RELAX_cfg.LowPassFilter, 4, 'bandpass' );
+    if strcmp(RELAX_cfg.NotchFilterType,'Butterworth')
+        % Use TESA to apply butterworth filter: 
+        EEG = RELAX_filtbutter( EEG, RELAX_cfg.LineNoiseFrequency-3, RELAX_cfg.LineNoiseFrequency+3, 2, 'bandstop' );
+    end
+    if strcmp(RELAX_cfg.NotchFilterType,'ZaplinePlus')
+        [EEG ] = clean_data_with_zapline_plus_eeglab_wrapper(EEG,struct('plotResults',0)); % requires the zapline plus plugin
+    end
+    
+    if strcmp(RELAX_cfg.LowPassFilterBeforeMWF,'no') % updated implementation, avoiding low pass filtering prior to MWF reduces chances of rank deficiencies, increasing potential values for MWF delay period 
+        if strcmp(RELAX_cfg.FilterType,'Butterworth')
+            EEG = RELAX_filtbutter( EEG, RELAX_cfg.HighPassFilter, [], 4, 'highpass' );
+        end
+        if strcmp(RELAX_cfg.FilterType,'pop_eegfiltnew')
+            EEG = pop_eegfiltnew(EEG,RELAX_cfg.HighPassFilter,[]);
+        end
+    end
+    
+    if strcmp(RELAX_cfg.LowPassFilterBeforeMWF,'yes') % original implementation, not recommended as increases chances of rank deficiencies
+        EEG = RELAX_filtbutter( EEG, RELAX_cfg.HighPassFilter, RELAX_cfg.LowPassFilter, 4, 'bandpass' );
+    end
 
     %% Clean flat channels and bad channels showing improbable data:
     % PREP pipeline: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4471356/
@@ -428,11 +450,22 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     if RELAX_cfg.Do_MWF_Once==0
         EEG=continuousEEG;
     end
-    [EEG] = RELAX_average_rereference(EEG);
-    EEG = eeg_checkset( EEG );        
+          
     % Reject periods that were marked as NaNs in the MWF masks because they 
     % showed extreme shift within the epoch or extremely improbable data:
     EEG = eeg_eegrej( EEG, EEG.RELAX.ExtremelyBadPeriodsForDeletion);
+    
+    if strcmp(RELAX_cfg.LowPassFilterBeforeMWF,'no') % if low pass filtering wasn't applied before MWF cleaning (recommended) apply it here
+        if strcmp(RELAX_cfg.FilterType,'Butterworth')
+            EEG = RELAX_filtbutter( EEG, [], RELAX_cfg.LowPassFilter, 4, 'lowpass' );
+        end
+        if strcmp(RELAX_cfg.FilterType,'pop_eegfiltnew')
+            EEG = pop_eegfiltnew(EEG,[],RELAX_cfg.LowPassFilter);
+        end
+    end
+    
+    [EEG] = RELAX_average_rereference(EEG);
+    EEG = eeg_checkset( EEG );  
     
     %% Perform wICA on ICLabel identified artifacts that remain:
     if RELAX_cfg.Perform_wICA_on_ICLabel==1
