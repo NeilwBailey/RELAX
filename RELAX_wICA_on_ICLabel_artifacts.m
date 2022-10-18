@@ -93,7 +93,7 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
     fastica_symm_Didnt_Converge=[0 0 0]; % NWB addition to track whether fastica_symm doesn't converge
 
     % run ICA using "runica" or "radical"
-    if strcmp(type,'runica')
+    if strcmp(type,'extended_infomax_ICA') % NWB altered label to increase clarity for the user
         [OUTEEG, ~] = pop_runica_nwb(EEG, 'extended',1,'interupt','on'); %runica for parametric, default extended for finding subgaussian distributions
         W = OUTEEG.icaweights*OUTEEG.icasphere;
         A = inv(W);
