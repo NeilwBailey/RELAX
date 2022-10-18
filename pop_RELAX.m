@@ -331,7 +331,7 @@ commandload3 = [ '[filetoprocess file_path] = uigetfile(''*.set'', ''Select the 
 
 % ICA options
 wICA_or_ICA={'Reduce ICA artifacts with wICA','Subtract ICA artifacts','No ICA artifact reduction'};
-icaOptions = {'runica','cudaica','fastica_symm','fastica_defl','amica'};
+icaOptions = {'extended_infomax_ICA','cudaica','fastica_symm','fastica_defl','amica'};
 ProbabilityOfBlinksOptions = {'data almost certainly has blinks', 'data might not have blinks', 'data definitely does not have blinks'};
 
 % GUI layout
