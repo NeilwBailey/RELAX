@@ -83,7 +83,7 @@ for FileNumber=RELAX_epoching_cfg.FilesToProcess(1,1:size(RELAX_epoching_cfg.Fil
             % if a 2 x 2 design, this will code triggers other than 'HappyGo'/'SadGo' as -1, and Go as 1 in the first factor, and triggers other than 'HappyGo'/'HappyNogo' as -1 in the second factor
         end
         if RELAX_epoching_cfg.NumberOfFactors==1
-            [EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_epoching_cfg,'Factor_1_Level_1',{'Go'}); % if a 2 condition design, this will code triggers other than 'Go' as -1, and Go as 1
+            [EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_epoching_cfg,'Factor_1_Level_1',RELAX_epoching_cfg.BL_correction_Factor_1_Level_1); % if a 2 condition design, this will code triggers other than 'Go' as -1, and Go as 1
         end
         if RELAX_epoching_cfg.NumberOfFactors==0
             [EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_epoching_cfg); % if only 1 stimulus condition present for each participant
