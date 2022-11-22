@@ -155,7 +155,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     % 30 are possible (and low pass filtering can be applied prior to the
     % wICA cleaning).
     
-    % de Cheveigné, A., & Arzounian, D. (2018). Robust detrending, rereferencing, outlier detection, and inpainting for multichannel data. NeuroImage, 172, 903-912.
+    % de CheveignÃ©, A., & Arzounian, D. (2018). Robust detrending, rereferencing, outlier detection, and inpainting for multichannel data. NeuroImage, 172, 903-912.
     
     if strcmp(RELAX_cfg.NotchFilterType,'Butterworth')
         % Use TESA to apply butterworth filter: 
@@ -421,7 +421,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         if isfield(EEG.RELAX, 'eyeblinkmask') % if eyeblinkmask has been created, do the following (thanks to Jane Tan for the suggested bug fix when eyeblinkmask is not created)
             EEG.RELAX=rmfield(EEG.RELAX,'eyeblinkmask'); % remove variables that are no longer necessary
         end
-        EEG.RELAX=rmfield(EEG.RELAX,'ExtremeEpochsToIgnoreInMuscleDetectionStep'); % remove variables that are no longer necessary
+        
         EEG.RELAXProcessingRoundThree=EEG.RELAXProcessing; % Record MWF cleaning details from round 3 in EEG file
         RELAXProcessingRoundThree=EEG.RELAXProcessing; % Record MWF cleaning details from round 3 into file for all participants
         
@@ -551,14 +551,14 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     end
     if (EEG.RELAXProcessingExtremeRejections.NumberOfMuscleContaminatedChannelsRecomendedToDelete...
             +EEG.RELAXProcessingExtremeRejections.NumberOfExtremeNoiseChannelsRecomendedToDelete...
-            +size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2))...
-            >RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
-        EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsExceededThreshold=...
+            +size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,1))...
+            >=RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
+        EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsMetOrExceededThreshold=...
             (EEG.RELAXProcessingExtremeRejections.NumberOfMuscleContaminatedChannelsRecomendedToDelete...
             +EEG.RELAXProcessingExtremeRejections.NumberOfExtremeNoiseChannelsRecomendedToDelete...
-            +size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2));
+            +size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,1));
     else
-        EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsExceededThreshold=0;
+        EEG.RELAX_issues_to_check.ElectrodeRejectionRecommendationsMetOrExceededThreshold=0;
     end
     if EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier>0.20
         EEG.RELAX_issues_to_check.HighProportionExcludedAsExtremeOutlier=EEG.RELAXProcessingExtremeRejections.ProportionExcludedForExtremeOutlier;
@@ -666,7 +666,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
 end
 
 set(groot, 'defaultAxesTickLabelInterpreter','none');
-if exist('CleanedMetrics','var')
+if RELAX_cfg.computecleanedmetrics==1
     try
         figure('Name','BlinkAmplitudeRatio','units','normalized','outerposition',[0.05 0.05 0.95 0.95]);
         boxplot(CleanedMetrics.BlinkAmplitudeRatio);
@@ -698,6 +698,15 @@ clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXP
 warning('Check "RELAX_issues_to_check" to see if any issues were noted for specific files');
 if WarningAboutFileNumber==1
     warning('You instructed RELAX to clean more files than were in your data folder. Check all your expected files were there?');
+end
+
+if find(RELAX_issues_to_check.ElectrodeRejectionRecommendationsMetOrExceededThreshold>0)>0
+    f = msgbox('Some files met or exceeded the electrode rejection threshold. We recommend visually inspecting the raw and cleaned files where this is the case. Open the "RELAX_issues_to_check" struct in the workspace, and check the third column. Files that exceeded the threshold will show a value above 0. Exclude files where raw data seems irretrievably noisy, or cleaned data still contains excessive noise.'...
+    ,'Some files met or exceeded the electrode rejection threshold');    
+    set(f,'Position',[300,300,450,150]);
+    ah = get( f, 'CurrentAxes' );
+    ch = get( ah, 'Children' );
+    set( ch, 'FontSize', 12 ); %makes text bigger
 end
 
 toc
