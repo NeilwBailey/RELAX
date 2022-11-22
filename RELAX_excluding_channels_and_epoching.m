@@ -433,7 +433,13 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
                 epochedEEG=pop_select(epochedEEG,'nochannel',epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject);  % Delete electrodes from epoched data that have been marked as showing more than the threshold number of epochs contaminated by muscle activity
                 epochedEEG.RELAXProcessingExtremeRejections.MuscleBasedElectrodesToReject=epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject;
             end
-        end            
+        end
+        epochedEEG.RELAX=rmfield(epochedEEG.RELAX,'ExtremeEpochsToIgnoreInMuscleDetectionStep');
+    elseif YouCanRejectThisManyChannelsHere<1
+        epochedEEG.RELAXProcessing.Details.NumberOfMuscleContaminatedChannelsRecomendedToDelete=0;
+        epochedEEG.RELAXProcessingExtremeRejections.NumberOfExtremeNoiseChannelsRecomendedToDelete=0;
+        epochedEEG.RELAXProcessingExtremeRejections.MuscleBasedElectrodesToReject={};      
+        epochedEEG.RELAXProcessingExtremeRejections.ExtremeDataBasedChannelToReject={};
     end
     epochedEEG.RELAXProcessingExtremeRejections.NumberOfMuscleContaminatedChannelsRecomendedToDelete=epochedEEG.RELAXProcessing.Details.NumberOfMuscleContaminatedChannelsRecomendedToDelete;
     epochedEEG.RELAX.ListOfChannelsAfterRejections={epochedEEG.chanlocs.labels}; % Get list of good channels
