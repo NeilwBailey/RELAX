@@ -4,7 +4,7 @@ The Reduction of Electroencephalographic Artifacts (RELAX) is an open source ext
 
 ## Downloading RELAX:
 
-To download RELAX, visit the RELAX release page: https://github.com/NeilwBailey/RELAX/releases
+To download RELAX, visit the RELAX release page: https://github.com/NeilwBailey/RELAX/releases, and unzip the file into your EEGLAB plugins folder. Alternatively, install RELAX directly using EEGLAB's plugin manager (within EEGLAB click on "File" > "Manage EEGLAB extensions" > search for RELAX).
 
 ## Further information:
 
