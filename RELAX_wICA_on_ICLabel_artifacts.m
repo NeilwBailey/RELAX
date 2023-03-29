@@ -186,6 +186,16 @@ function [EEG,wIC,A,W,IC] = RELAX_wICA_on_ICLabel_artifacts(EEG,varargin) % NWB 
             OUTEEG.icaact = reshape( OUTEEG.icaact, size(OUTEEG.icaact,1), OUTEEG.pnts, OUTEEG.trials);
         end
         IC=reshape(OUTEEG.icaact, size(OUTEEG.icaact,1), []);
+    elseif strcmp(type,'picard') % RELAX v1.1.3 update - NWB added to allow PICARD-O to be run using default settings
+        [OUTEEG, ~] = pop_runica_nwb(EEG, 'picard', 'mode','ortho','tol',1e-6,'maxiter',500); % run picard
+        W = OUTEEG.icaweights*OUTEEG.icasphere;
+        A = inv(W);
+        OUTEEG = eeg_checkset(OUTEEG, 'ica'); 
+        if isempty(OUTEEG.icaact)==1
+            OUTEEG.icaact = (OUTEEG.icaweights*OUTEEG.icasphere)*OUTEEG.data(OUTEEG.icachansind,:);      
+            OUTEEG.icaact = reshape( OUTEEG.icaact, size(OUTEEG.icaact,1), OUTEEG.pnts, OUTEEG.trials);
+        end
+        IC=reshape(OUTEEG.icaact, size(OUTEEG.icaact,1), []);
     end
     %% NWB added section to identify artifactual ICs with ICLabel:
     % Use ICLabel to identify artifactual components, so that wICA can be

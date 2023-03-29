@@ -205,7 +205,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         ShiftLowerBound=2*ones(size(epochedEEG.data,1),1);
         for epoch = 1:size(epochedEEG.data,3)
             epochedEEG.RELAXProcessing.Details.FlatRejectChannels(AmplitudeShiftWithinEachEpoch(:,:,epoch)<ShiftLowerBound(:,1),epoch)=1; 
-            epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(AmplitudeShiftWithinEachEpoch(:,:,epoch)>ShiftUpperBound(:,1),epoch)=1;   
+            epochedEEG.RELAXProcessing.Details.CumulativeMethodsRejectChannels(AmplitudeShiftWithinEachEpoch(:,:,epoch)<ShiftLowerBound(:,1),epoch)=1; % v1.1.3 update - flatline epochs weren't being added to the cumulative bad epoch/electrode detections. They are now added.
         end
 
         %% Absolute threshold to identify absolute amplitude extreme values:
@@ -359,6 +359,7 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
         % Calculating how many electrodes can be deleted based on user
         % settings:
         YouCanRejectThisManyChannelsHere=floor(RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*TotalInitialChannels)-(TotalInitialChannels-CurrentChannels);
+        epochedEEG.RELAXProcessing.Details.NumberOfMuscleContaminatedChannelsRecomendedToDelete=0; % v1.1.3 update, so later lines can still use this variable even if the following loop isn't engaged. Thankyou Mana Biabani for the update
         if YouCanRejectThisManyChannelsHere>0
             % Selecting epochs that have slopes that are shallow, suggesting high gamma and muscle artifact:
             MuscleSlopesEpochsxChannels=zeros(size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,2),size(epochedEEG.RELAXProcessing.Details.Muscle_Slopes,1));
@@ -433,6 +434,9 @@ function [continuousEEG, epochedEEG] = RELAX_excluding_channels_and_epoching(con
                 epochedEEG=pop_select(epochedEEG,'nochannel',epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject);  % Delete electrodes from epoched data that have been marked as showing more than the threshold number of epochs contaminated by muscle activity
                 epochedEEG.RELAXProcessingExtremeRejections.MuscleBasedElectrodesToReject=epochedEEG.RELAXProcessing.Details.MuscleBasedElectrodesToReject;
             end
+        elseif YouCanRejectThisManyChannelsHere<1
+            epochedEEG.RELAXProcessing.Details.NumberOfMuscleContaminatedChannelsRecomendedToDelete=0;
+            epochedEEG.RELAXProcessingExtremeRejections.MuscleBasedElectrodesToReject={};
         end
         epochedEEG.RELAX=rmfield(epochedEEG.RELAX,'ExtremeEpochsToIgnoreInMuscleDetectionStep');
     elseif YouCanRejectThisManyChannelsHere<1

@@ -97,8 +97,11 @@ function [Regression_BL_Corrected_EEG]=RELAX_RegressionBL_Correction(EEG,RELAX_e
     
     %% Determine mean amplitude in baseline period and remove with regression:
 
-    BLperiodstart=find(EEG.times==RELAX_epoching_cfg.BLperiod(1,1)); % set time window for baseline correction by reference to timepoints in the epoch (in seconds)
-    BLperiodend=find(EEG.times==RELAX_epoching_cfg.BLperiod(1,2)); % this window will be established in the following line based on sample points in the epoch (rather than timepoints)
+    [dif1, BLperiodstart] = min(abs(EEG.times - RELAX_epoching_cfg.BLperiod(1,1))); % RELAX v1.1.3 addition to overcome selected value not being in the data if sampling rate is < 1000Hz. Thankyou to Kate Godfrey for the fix!
+    [dif2, BLperiodend] = min(abs(EEG.times - RELAX_epoching_cfg.BLperiod(1,2))); 
+    if dif1 > 5 || dif2 > 5
+        warning('Specified baseline limit timepoints not possible due to sampling rate. The closest found limits were %s ms and %s ms different from input window', num2str(dif1), num2str(dif2));
+    end
 
     for c=1:size(EEG.data,1) % c = channels, for each channel
         confounds(:,1) = squeeze(mean(EEG.data(c,BLperiodstart:BLperiodend,:),2)); % obtain a list of the mean amplitude in the BL period from each trial to regress this out from each timepoint for that channel

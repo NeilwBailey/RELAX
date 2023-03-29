@@ -1,4 +1,4 @@
-%% RELAX EEG CLEANING PIPELINE, Copyright (C) (2022) Neil Bailey
+%% RELAX EEG CLEANING PIPELINE, Copyright (C) (2022) Neil Bailey - visit https://github.com/NeilwBailey/RELAX/wiki for full instructions
 
 %     This program is free software: you can redistribute it and/or modify
 %     it under the terms of the GNU General Public License as published by
@@ -118,6 +118,9 @@ if ~isfield(RELAX_cfg,'computecleanedmetrics')
 end
 if ~isfield(RELAX_cfg,'MWFRoundToCleanBlinks')
     RELAX_cfg.MWFRoundToCleanBlinks=2; % Which round to clean blinks in (1 for the first, 2 for the second...)
+end
+if ~isfield(RELAX_cfg,'LowPassFilterAt_6Hz_BeforeDetectingBlinks')
+    RELAX_cfg.LowPassFilterAt_6Hz_BeforeDetectingBlinks='no'; % low pass filters the data @ 6Hz prior to blink detection (helps if high power alpha is disrupting blink detection, not necessary in the vast majority of cases, default = 'no')
 end
 if ~isfield(RELAX_cfg,'ProbabilityDataHasNoBlinks')
     RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 1 = data might not have blinks, 2 = data definitely doesn't have blinks.
@@ -259,6 +262,9 @@ end
 if ~isfield(RELAX_cfg,'MaxProportionOfElectrodesThatCanBeDeleted')
     RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
 end
+if ~isfield(RELAX_cfg,'InterpolateRejectedElectrodesAfterCleaning')
+    RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning='no'; % Interpolate rejected electrodes back into the data after each file has been cleaned and before saving the cleaned data?
+end
 if ~isfield(RELAX_cfg,'MWFDelayPeriod')
     RELAX_cfg.MWFDelayPeriod=16; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
 end
@@ -340,9 +346,10 @@ commandload3 = [ '[filetoprocess file_path] = uigetfile(''*.set'', ''Select the 
 
 % ICA options
 wICA_or_ICA={'Reduce ICA artifacts with wICA','Subtract ICA artifacts','No ICA artifact reduction'};
-icaOptions = {'extended_infomax_ICA','cudaica','fastica_symm','fastica_defl','amica'};
+icaOptions = {'extended_infomax_ICA','cudaica','fastica_symm','fastica_defl','amica','picard'};
 ProbabilityOfBlinksOptions = {'data almost certainly has blinks', 'data might not have blinks', 'data definitely does not have blinks'};
 YesNoOptions={'no','yes'};
+YesNoOptionsLowPassFilterForBlinks={'no - default (works in the vast majority of cases)','yes - apply if RELAX is not detecting blinks because of high power alpha'};
 BandPassFilterOptions={'Butterworth','pop_eegfiltnew'};
 LineNoiseOptions={'Butterworth','ZaplinePlus'};
 
@@ -351,7 +358,7 @@ geometry = {[0.5 1.0 0.2 1.0 1.0 0.2] ... % setting directory / file to process
             1 ...
             [0.6 1.5 0.2 0.75 1.2] ... % setting cap location file and electrodes to exclude
             1 ...
-            [6 0.9 3 0.5 2.75 .75 2 1.2 2 1.2] ... % bandpass filter settings
+            [4 1.1 3 0.7 2.75 .75 2 1.2 2 1.2] ... % bandpass filter settings
             1 ...
             [1.4 0.2 0.2 1.4 0.2 0.2 1.3 0.2] ... % electrode rejection settings
             1 ...
@@ -365,7 +372,7 @@ geometry = {[0.5 1.0 0.2 1.0 1.0 0.2] ... % setting directory / file to process
             1 ...
             [0.6 0.6 0.4 0.8]... % wICA settings 
             1 ...
-            [0.9 1 1 0.7 1]... % Blink probability and electrode options
+            [1.3 1 0.3 0.9 1.5 1.6 1.5]... % Blink probability and electrode options
             1 ...
             [0.95 0.9 1 0.9]... % eye movement affected electrodes
             1 ...
@@ -373,7 +380,7 @@ geometry = {[0.5 1.0 0.2 1.0 1.0 0.2] ... % setting directory / file to process
             1 ...
             [1.7 0.2 0.05 2.2 0.2]... % drift marking for MWF
             1 ...
-            [2.2 0.3 2.5]... % horizontal eye movement marking for MWF
+            [2.2 0.3 1 2.2 0.5]... % horizontal eye movement marking for MWF
             1 ...
             [2 0.4 0.8 0.7 0.8]... % computing metrics? 
             1 ...
@@ -394,13 +401,13 @@ uilist = {{'style', 'text', 'string', 'Raw data folder:','fontweight','bold','fo
           {'style', 'text', 'string', 'Electrodes to exclude:','fontweight','bold','fontsize', 9} ...
           {'style', 'edit', 'string', ''} ...
           {}...
-          {'style', 'text', 'string', 'Bandpass Filter (Hz) [highpass, lowpass] (0.25Hz is best for ERPs, 1Hz cleans better):','fontsize', 9} ...
+          {'style', 'text', 'string', 'Bandpass Filter [highpass, lowpass]:','fontsize', 9} ...
           {'style', 'edit', 'string', [num2str(RELAX_cfg.HighPassFilter), '  ', num2str(RELAX_cfg.LowPassFilter)],'fontsize', 9}...
-          {'style', 'text', 'string', 'Line Noise Frequency (Hz) [eg. 50 or 60]:','fontsize', 9} ...
+          {'style', 'text', 'string', 'Line Noise Frequency [eg. 50 or 60]:','fontsize', 9} ...
           {'style', 'edit', 'string', RELAX_cfg.LineNoiseFrequency,'fontsize', 9}...
-          {'style', 'text', 'string', 'Low pass filter before MWF?','fontweight','bold','fontsize', 9} ...
+          {'style', 'text', 'string', 'Lowpass filter before MWF?','fontweight','bold','fontsize', 9} ...
           {'style', 'popupmenu', 'string', YesNoOptions, 'tag', 'YesNoOpts','Value',1,'fontsize', 9} ...
-          {'style', 'text', 'string', 'Band Pass Filter Type:','fontweight','bold','fontsize', 9} ...
+          {'style', 'text', 'string', 'Bandpass Filter Type:','fontweight','bold','fontsize', 9} ...
           {'style', 'popupmenu', 'string', BandPassFilterOptions, 'tag', 'BandPassFilterOpts','Value',1,'fontsize', 9} ...
           {'style', 'text', 'string', 'Clean Line Noise With:','fontweight','bold','fontsize', 9} ...
           {'style', 'popupmenu', 'string', LineNoiseOptions, 'tag', 'linenoiseOpts','Value',1,'fontsize', 9} ...
@@ -452,6 +459,8 @@ uilist = {{'style', 'text', 'string', 'Raw data folder:','fontweight','bold','fo
           {'style', 'edit', 'string', [RELAX_cfg.BlinkElectrodes{1,1} ' ' RELAX_cfg.BlinkElectrodes{2,1} ' ' RELAX_cfg.BlinkElectrodes{3,1}...
           ' ' RELAX_cfg.BlinkElectrodes{4,1} ' ' RELAX_cfg.BlinkElectrodes{5,1} ' ' RELAX_cfg.BlinkElectrodes{6,1} ...
           ' ' RELAX_cfg.BlinkElectrodes{7,1} ' ' RELAX_cfg.BlinkElectrodes{8,1} ' ' RELAX_cfg.BlinkElectrodes{9,1} ' ' RELAX_cfg.BlinkElectrodes{10,1}],'fontsize', 9} ...
+          {'style', 'text', 'string', '6Hz low pass filter before blink detection?','fontweight','bold','fontsize', 9} ...
+          {'style', 'popupmenu', 'string', YesNoOptionsLowPassFilterForBlinks, 'tag', 'YesNoOpts','Value',1,'fontsize', 9} ...
           {} ...
           {'style', 'text', 'string', 'Left sided HEOG affected electrodes:','fontsize', 9} ...
           {'style', 'edit', 'string', [RELAX_cfg.HEOGLeftpattern{1,1} ' ' RELAX_cfg.HEOGLeftpattern{1,2} ' ' RELAX_cfg.HEOGLeftpattern{1,3}...
@@ -477,6 +486,8 @@ uilist = {{'style', 'text', 'string', 'Raw data folder:','fontweight','bold','fo
           {'style', 'text', 'string', 'Horizontal eye movement threshold (MAD from median) for MWF cleaning:','fontsize', 9} ...
           {'style', 'edit', 'string', RELAX_cfg.HorizontalEyeMovementThreshold,'fontsize', 9}...
           {'style', 'text', 'string', '','fontsize', 9}...
+          {'style', 'text', 'string', 'Interpolate rejected electrodes back into data after cleaning?','fontsize', 9} ...
+          {'style', 'popupmenu', 'string', YesNoOptions, 'tag', 'YesNoOpts','Value',1,'fontsize', 9} ...
           {}...
           {'style', 'text', 'string', 'File numbers to process this session (from start file # to finish file # and files in between):','fontsize', 9} ...
           {'style', 'edit', 'string', ['1', '  ', '2'],'fontsize', 9}...
@@ -491,7 +502,7 @@ uilist = {{'style', 'text', 'string', 'Raw data folder:','fontweight','bold','fo
           {'Style', 'checkbox', 'string' 'After 3rd MWF cleaning' 'value' RELAX_cfg.saveround3 'tag' 'MWF3' ,'fontsize', 9} ... % Input 2
           };
 
-result = inputgui('geometry', geometry, 'geomvert', [1 .4 1 .4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1],  'uilist', uilist, 'title', 'RELAX Parameter Setting',  'helpcom', 'pophelp(''pop_RELAX'')');
+result = inputgui('geometry', geometry, 'geomvert', [1 .4 1 .4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1 0.4 1],  'uilist', uilist, 'title', 'RELAX Parameter Setting',  'helpcom', 'pophelp(''pop_RELAX_beta'')');
 
 % Replace default values with inputs
 RELAX_cfg.myPath = result{1};
@@ -524,21 +535,23 @@ RELAX_cfg.Perform_ICA_subtract=result{24}-1;
 RELAX_cfg.ICA_method = icaOptions{result{25}};
 RELAX_cfg.ProbabilityDataHasNoBlinks=(result{26})-1;
 RELAX_cfg.BlinkElectrodes= strtrim(strsplit(strrep(result{27},',','')))';
-RELAX_cfg.HEOGLeftpattern = string(strtrim(strsplit(strrep(result{28},',',''))));
-RELAX_cfg.HEOGRightpattern= string(strtrim(strsplit(strrep(result{29},',',''))));
-RELAX_cfg.MuscleSlopeThreshold=str2double(result{30});
-RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=str2double(result{31});
-RELAX_cfg.DriftSeverityThreshold=str2double(result{32});
-RELAX_cfg.ProportionWorstEpochsForDrift=str2double(result{33});
-RELAX_cfg.HorizontalEyeMovementThreshold=str2double(result{34});
-FilesToProcess=strsplit(strrep(result{35},',',''));
+RELAX_cfg.LowPassFilterAt_6Hz_BeforeDetectingBlinks=YesNoOptions{result{28}};
+RELAX_cfg.HEOGLeftpattern = string(strtrim(strsplit(strrep(result{29},',',''))));
+RELAX_cfg.HEOGRightpattern= string(strtrim(strsplit(strrep(result{30},',',''))));
+RELAX_cfg.MuscleSlopeThreshold=str2double(result{31});
+RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=str2double(result{32});
+RELAX_cfg.DriftSeverityThreshold=str2double(result{33});
+RELAX_cfg.ProportionWorstEpochsForDrift=str2double(result{34});
+RELAX_cfg.HorizontalEyeMovementThreshold=str2double(result{35});
+RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning=YesNoOptions{result{36}};
+FilesToProcess=strsplit(strrep(result{37},',',''));
 RELAX_cfg.FilesToProcess=str2double(FilesToProcess(1,1)):str2double(FilesToProcess(1,2));
-RELAX_cfg.computerawmetrics=result{36};
-RELAX_cfg.computecleanedmetrics=result{37};
-RELAX_cfg.saveextremesrejected=result{38};
-RELAX_cfg.saveround1=result{39};
-RELAX_cfg.saveround2=result{40};
-RELAX_cfg.saveround3=result{41};
+RELAX_cfg.computerawmetrics=result{38};
+RELAX_cfg.computecleanedmetrics=result{39};
+RELAX_cfg.saveextremesrejected=result{40};
+RELAX_cfg.saveround1=result{41};
+RELAX_cfg.saveround2=result{42};
+RELAX_cfg.saveround3=result{43};
 
 if ~isfield(RELAX_cfg,'filename')
     RELAX_cfg.filename = [];
@@ -558,6 +571,12 @@ end
 toolboxlist=ver;
 if isempty(find(strcmp({toolboxlist.Name}, 'Signal Processing Toolbox')==1, 1))
     warndlg('Signal Processing Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Signal Processing Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Wavelet Toolbox')==1, 1))
+    warndlg('Wavelet Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Wavelet Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Statistics and Machine Learning Toolbox')==1, 1))
+    warndlg('Statistics and Machine Learning Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Statistics and Machine Learning Toolbox not installed');
 end
 
 PluginPath=strcat(eeglabPath,'\plugins\');

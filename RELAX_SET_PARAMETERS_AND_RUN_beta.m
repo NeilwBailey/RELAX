@@ -112,7 +112,7 @@ clear all; close all; clc;
 % EEGLAB:
 % https://sccn.ucsd.edu/eeglab/index.php
 % Delorme, A., & Makeig, S. (2004). EEGLAB: an open source toolbox for analysis of single-trial EEG dynamics including independent component analysis. Journal of neuroscience methods, 134(1), 9-21.
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\');
+addpath('C:\Analysis_Tools\eeglab2023.0');
 eeglab;
 
 % PREP pipeline to reject bad electrodes (install plugin to EEGLAB, or via the github into the EEGLAB plugin folder): 
@@ -123,28 +123,28 @@ eeglab;
 % Specify the MWF path:
 % https://github.com/exporl/mwf-artifact-removal
 % Somers, B., Francart, T., & Bertrand, A. (2018). A generic EEG artifact removal algorithm based on the multi-channel Wiener filter. Journal of neural engineering, 15(3), 036007.
-addpath(genpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\mwf-artifact-removal-master'));
+addpath(genpath('C:\Analysis_Tools\eeglab2023.0\plugins\mwf-artifact-removal-master'));
 
 % Fieldtrip:
 % http://www.fieldtriptoolbox.org/
 % Robert Oostenveld, Pascal Fries, Eric Maris, and Jan-Mathijs Schoffelen. FieldTrip: Open Source Software for Advanced Analysis of MEG, EEG, and Invasive Electrophysiological Data. Computational Intelligence and Neuroscience, vol. 2011, Article ID 156869, 9 pages, 2011. doi:10.1155/2011/156869.
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\Fieldtrip-lite20210601');
+addpath('C:\Analysis_Tools\eeglab2023.0\plugins\Fieldtrip-lite20210601');
 
 % fastica:
 % http://research.ics.aalto.fi/ica/fastica/code/dlcode.shtml 
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\FastICA_25\');
+addpath('C:\Analysis_Tools\eeglab2023.0\plugins\FastICA_25\');
 
 % ICLabel in your eeglab folder as a plugin or via the github:
 % https://github.com/sccn/ICLabel
 
 % Specify  RELAX folder location (this toolbox):
-addpath('D:\Data_Analysis\Analysis_Tools_and_Software\eeglab_2021_1\plugins\RELAX-1.1.0\');
+addpath('C:\Analysis_Tools\eeglab2023.0\plugins\RELAX-1.1.3\');
 
 % Specify your electrode locations with the correct cap file:
-RELAX_cfg.caploc='D:\Data_Analysis\Cap_Location_Files\standard-10-5-cap385.elp'; % path containing electrode positions. Set to =[] if electrode locations are already in your EEG file.
+RELAX_cfg.caploc='C:\Analysis_Tools\CapLocationFiles\standard-10-5-cap385.elp'; % path containing electrode positions. Set to =[] if electrode locations are already in your EEG file.
 
 % Specify the to be processed file locations:
-RELAX_cfg.myPath='D:\DATA_TO_BE_PREPROCESSED\';
+RELAX_cfg.myPath='C:\DATA_TO_BE_PREPROCESSED\';
 
 % Or specify the single file to be processed:
 RELAX_cfg.filename=[]; % (including folder path)
@@ -198,6 +198,7 @@ RELAX_cfg.computerawmetrics=1; % Compute blink and muscle metrics from the raw d
 RELAX_cfg.computecleanedmetrics=1; % Compute SER, ARR, blink and muscle metrics from the cleaned data?
 
 RELAX_cfg.MWFRoundToCleanBlinks=2; % Which round to clean blinks in (1 for the first, 2 for the second...)
+RELAX_cfg.LowPassFilterAt_6Hz_BeforeDetectingBlinks='no'; % low pass filters the data @ 6Hz prior to blink detection (helps if high power alpha is disrupting blink detection, not necessary in the vast majority of cases, default = 'no')
 RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 1 = data might not have blinks, 2 = data definitely doesn't have blinks.
 % 0 = eg. task related data where participants are focused with eyes open, 
 % 1 = eg. eyes closed recordings, but with participants who might still open their eyes at times, 
@@ -271,6 +272,7 @@ RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % 
 RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing extreme artifacts is higher than this, the electrode is deleted
 
 RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
+RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning='no'; % Interpolate rejected electrodes back into the data after each file has been cleaned and before saving the cleaned data?
 
 RELAX_cfg.MWFDelayPeriod=16; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
 
@@ -286,6 +288,12 @@ end
 toolboxlist=ver;
 if isempty(find(strcmp({toolboxlist.Name}, 'Signal Processing Toolbox')==1, 1))
     warndlg('Signal Processing Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Signal Processing Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Wavelet Toolbox')==1, 1))
+    warndlg('Wavelet Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Wavelet Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Statistics and Machine Learning Toolbox')==1, 1))
+    warndlg('Statistics and Machine Learning Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Statistics and Machine Learning Toolbox not installed');
 end
 
 PluginPath=strcat(eeglabPath,'\plugins\');
@@ -370,7 +378,7 @@ end
 % Fitzgibbon, S. P., DeLosAngeles, D., Lewis, T. W., Powers, D. M. W., Grummett, T. S., Whitham, E. M., ... & Pope, K. J. (2016). Automatic determination of EMG-contaminated components and validation of independent component analysis using EEG during pharmacologic paralysis. Clinical Neurophysiology, 127(3), 1781-1793.
 
 %% RUN SCRIPT BELOW:
-RELAX_cfg.FilesToProcess=1;%:numel(RELAX_cfg.files); % Set which files to process
+RELAX_cfg.FilesToProcess=1:numel(RELAX_cfg.files); % Set which files to process
 
 [RELAX_cfg, FileNumber, CleanedMetrics, RawMetrics, RELAXProcessingRoundOneAllParticipants, RELAXProcessingRoundTwoAllParticipants, RELAXProcessing_wICA_AllParticipants,...
         RELAXProcessing_ICA_AllParticipants, RELAXProcessingRoundThreeAllParticipants, RELAX_issues_to_check, RELAXProcessingExtremeRejectionsAllParticipants] = RELAX_Wrapper_beta (RELAX_cfg);

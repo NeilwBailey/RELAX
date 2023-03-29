@@ -97,6 +97,16 @@ function [EEG] = RELAX_ICA_subtract(EEG,RELAX_cfg)
             OUTEEG.icaact = reshape( OUTEEG.icaact, size(OUTEEG.icaact,1), OUTEEG.pnts, OUTEEG.trials);
         end
         IC=reshape(OUTEEG.icaact, size(OUTEEG.icaact,1), []);
+    elseif strcmp(RELAX_cfg.ICA_method,'picard') % RELAX 1.1.3 - NWB added to allow PICARD-O to be run using default settings
+        [OUTEEG, ~] = pop_runica_nwb(EEG, 'picard', 'mode','ortho','tol',1e-6,'maxiter',500); % run picard
+        W = OUTEEG.icaweights*OUTEEG.icasphere;
+        A = inv(W);
+        OUTEEG = eeg_checkset(OUTEEG, 'ica'); 
+        if isempty(OUTEEG.icaact)==1
+            OUTEEG.icaact = (OUTEEG.icaweights*OUTEEG.icasphere)*OUTEEG.data(OUTEEG.icachansind,:);      
+            OUTEEG.icaact = reshape( OUTEEG.icaact, size(OUTEEG.icaact,1), OUTEEG.pnts, OUTEEG.trials);
+        end
+        IC=reshape(OUTEEG.icaact, size(OUTEEG.icaact,1), []);
     end
     % Use ICLabel to identify artifactual components, so that wICA can be
     % performed on them only:

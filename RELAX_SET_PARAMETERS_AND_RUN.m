@@ -198,6 +198,7 @@ RELAX_cfg.computerawmetrics=1; % Compute blink and muscle metrics from the raw d
 RELAX_cfg.computecleanedmetrics=1; % Compute SER, ARR, blink and muscle metrics from the cleaned data?
 
 RELAX_cfg.MWFRoundToCleanBlinks=2; % Which round to clean blinks in (1 for the first, 2 for the second...)
+RELAX_cfg.LowPassFilterAt_6Hz_BeforeDetectingBlinks='no'; % low pass filters the data @ 6Hz prior to blink detection (helps if high power alpha is disrupting blink detection, not necessary in the vast majority of cases, default = 'no')
 RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 1 = data might not have blinks, 2 = data definitely doesn't have blinks.
 % 0 = eg. task related data where participants are focused with eyes open, 
 % 1 = eg. eyes closed recordings, but with participants who might still open their eyes at times, 
@@ -267,6 +268,7 @@ RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=0.05; % 
 RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=0.05; % If the proportion of all epochs from a single electrode that are marked as containing extreme artifacts is higher than this, the electrode is deleted
 
 RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
+RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning='no'; % Interpolate rejected electrodes back into the data after each file has been cleaned and before saving the cleaned data?
 
 RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
 
@@ -282,6 +284,12 @@ end
 toolboxlist=ver;
 if isempty(find(strcmp({toolboxlist.Name}, 'Signal Processing Toolbox')==1, 1))
     warndlg('Signal Processing Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Signal Processing Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Wavelet Toolbox')==1, 1))
+    warndlg('Wavelet Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Wavelet Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Statistics and Machine Learning Toolbox')==1, 1))
+    warndlg('Statistics and Machine Learning Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Statistics and Machine Learning Toolbox not installed');
 end
 
 PluginPath=strcat(eeglabPath,'\plugins\');

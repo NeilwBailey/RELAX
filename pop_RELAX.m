@@ -1,4 +1,4 @@
-%% RELAX EEG CLEANING PIPELINE, Copyright (C) (2022) Neil Bailey
+%% RELAX EEG CLEANING PIPELINE, Copyright (C) (2022) Neil Bailey - visit https://github.com/NeilwBailey/RELAX/wiki for full instructions
 
 %     This program is free software: you can redistribute it and/or modify
 %     it under the terms of the GNU General Public License as published by
@@ -118,6 +118,9 @@ if ~isfield(RELAX_cfg,'computecleanedmetrics')
 end
 if ~isfield(RELAX_cfg,'MWFRoundToCleanBlinks')
     RELAX_cfg.MWFRoundToCleanBlinks=2; % Which round to clean blinks in (1 for the first, 2 for the second...)
+end
+if ~isfield(RELAX_cfg,'LowPassFilterAt_6Hz_BeforeDetectingBlinks')
+    RELAX_cfg.LowPassFilterAt_6Hz_BeforeDetectingBlinks='no'; % low pass filters the data @ 6Hz prior to blink detection (helps if high power alpha is disrupting blink detection, not necessary in the vast majority of cases, default = 'no')
 end
 if ~isfield(RELAX_cfg,'ProbabilityDataHasNoBlinks')
     RELAX_cfg.ProbabilityDataHasNoBlinks=0; % 0 = data almost certainly has blinks, 1 = data might not have blinks, 2 = data definitely doesn't have blinks.
@@ -250,6 +253,9 @@ end
 if ~isfield(RELAX_cfg,'MaxProportionOfElectrodesThatCanBeDeleted')
     RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=0.20; % Sets the maximum proportion of electrodes that are allowed to be deleted after PREP's bad electrode deletion step
 end
+if ~isfield(RELAX_cfg,'InterpolateRejectedElectrodesAfterCleaning')
+    RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning='no'; % Interpolate rejected electrodes back into the data after each file has been cleaned and before saving the cleaned data?
+end
 if ~isfield(RELAX_cfg,'MWFDelayPeriod')
     RELAX_cfg.MWFDelayPeriod=8; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
 end
@@ -333,6 +339,7 @@ commandload3 = [ '[filetoprocess file_path] = uigetfile(''*.set'', ''Select the 
 wICA_or_ICA={'Reduce ICA artifacts with wICA','Subtract ICA artifacts','No ICA artifact reduction'};
 icaOptions = {'extended_infomax_ICA','cudaica','fastica_symm','fastica_defl','amica'};
 ProbabilityOfBlinksOptions = {'data almost certainly has blinks', 'data might not have blinks', 'data definitely does not have blinks'};
+YesNoOptions={'no','yes'};
 
 % GUI layout
 geometry = {[0.5 1.0 0.2 1.0 1.0 0.2] ... % setting directory / file to process
@@ -361,7 +368,7 @@ geometry = {[0.5 1.0 0.2 1.0 1.0 0.2] ... % setting directory / file to process
             1 ...
             [1.7 0.2 0.05 2.2 0.2]... % drift marking for MWF
             1 ...
-            [2.2 0.3 2.5]... % horizontal eye movement marking for MWF
+            [2.2 0.3 1 2.2 0.5]... % horizontal eye movement marking for MWF
             1 ...
             [2 0.4 0.8 0.7 0.8]... % computing metrics? 
             1 ...
@@ -460,6 +467,8 @@ uilist = {{'style', 'text', 'string', 'Raw data folder:','fontweight','bold','fo
           {'style', 'text', 'string', 'Horizontal eye movement threshold (MAD from median) for MWF cleaning:','fontsize', 9} ...
           {'style', 'edit', 'string', RELAX_cfg.HorizontalEyeMovementThreshold,'fontsize', 9}...
           {'style', 'text', 'string', '','fontsize', 9}...
+          {'style', 'text', 'string', 'Interpolate rejected electrodes back into data after cleaning?','fontsize', 9} ...
+          {'style', 'popupmenu', 'string', YesNoOptions, 'tag', 'YesNoOpts','Value',1,'fontsize', 9} ...
           {}...
           {'style', 'text', 'string', 'File numbers to process this session (from start file # to finish file # and files in between):','fontsize', 9} ...
           {'style', 'edit', 'string', ['1', '  ', '2'],'fontsize', 9}...
@@ -511,14 +520,15 @@ RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=str2double(result{28});
 RELAX_cfg.DriftSeverityThreshold=str2double(result{29});
 RELAX_cfg.ProportionWorstEpochsForDrift=str2double(result{30});
 RELAX_cfg.HorizontalEyeMovementThreshold=str2double(result{31});
-FilesToProcess=strsplit(strrep(result{32},',',''));
+RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning=YesNoOptions{result{32}};
+FilesToProcess=strsplit(strrep(result{33},',',''));
 RELAX_cfg.FilesToProcess=str2double(FilesToProcess(1,1)):str2double(FilesToProcess(1,2));
-RELAX_cfg.computerawmetrics=result{33};
-RELAX_cfg.computecleanedmetrics=result{34};
-RELAX_cfg.saveextremesrejected=result{35};
-RELAX_cfg.saveround1=result{36};
-RELAX_cfg.saveround2=result{37};
-RELAX_cfg.saveround3=result{38};
+RELAX_cfg.computerawmetrics=result{34};
+RELAX_cfg.computecleanedmetrics=result{35};
+RELAX_cfg.saveextremesrejected=result{36};
+RELAX_cfg.saveround1=result{37};
+RELAX_cfg.saveround2=result{38};
+RELAX_cfg.saveround3=result{39};
 
 if ~isfield(RELAX_cfg,'filename')
     RELAX_cfg.filename = [];
@@ -538,6 +548,12 @@ end
 toolboxlist=ver;
 if isempty(find(strcmp({toolboxlist.Name}, 'Signal Processing Toolbox')==1, 1))
     warndlg('Signal Processing Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Signal Processing Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Wavelet Toolbox')==1, 1))
+    warndlg('Wavelet Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Wavelet Toolbox not installed');
+end
+if isempty(find(strcmp({toolboxlist.Name}, 'Statistics and Machine Learning Toolbox')==1, 1))
+    warndlg('Statistics and Machine Learning Toolbox may not be installed. Toolbox can be installed through MATLAB "Add-Ons" button','Statistics and Machine Learning Toolbox not installed');
 end
 
 PluginPath=strcat(eeglabPath,'\plugins\');
