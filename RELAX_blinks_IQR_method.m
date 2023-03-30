@@ -131,10 +131,6 @@ function [continuousEEG, epochedEEG] = RELAX_blinks_IQR_method(continuousEEG, ep
         end
     end    
 
-    if continuousEEG.RELAX.IQRmethodDetectedBlinks==0
-        warning('No blinks were detected - if blinks are expected then you should visually inspect the file');
-    end
-    
     continuousEEG=eeg_checkset(continuousEEG,'eventconsistency');        
     continuousEEG.RELAX.eyeblinkmask=continuousEEG.RELAXProcessing.Details.eyeblinkmask;
     epochedEEG.RELAX.eyeblinkmask=continuousEEG.RELAX.eyeblinkmask;

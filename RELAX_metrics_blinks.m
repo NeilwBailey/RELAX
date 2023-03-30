@@ -48,6 +48,7 @@ function [continuousEEG, epochedEEG, BlinkMetricProblem] = RELAX_metrics_blinks(
             continuousEEG.RELAX_Metrics.Cleaned.BlinkAmplitudeRatio=BlinkAmplitudeRatio;
         end
     catch
-        BlinkMetricProblem='no blink free baseline periods available';
+        continuousEEG.RELAX_Metrics.BlinkMetricProblem='no blink free baseline periods available';
+        epochedEEG.RELAX_Metrics.BlinkMetricProblem='no blink free baseline periods available';
     end
 end
