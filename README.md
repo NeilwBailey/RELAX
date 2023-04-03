@@ -10,6 +10,6 @@ To download RELAX, visit the RELAX release page: https://github.com/NeilwBailey/
 
 Further information can be found in the publication manuscripts, which must be cited when RELAX is used: 
 
-Bailey NW, Biabani M, Hill AT, Miljevic A, Rogasch NC, McQueen B, Murphy OW, Fitzgerald PB (2022). Introducing RELAX (the Reduction of Electroencephalographic Artifacts): A fully automated pre-processing pipeline for cleaning EEG data - Part 1: Algorithm and Application to Oscillations. BioRxiv.
+Bailey, N. W., Biabani, M., Hill, A. T., Miljevic, A., Rogasch, N. C., McQueen, B., Murphy, O.W., & Fitzgerald, P. B. (2023). Introducing RELAX: An automated pre-processing pipeline for cleaning EEG data-Part 1: Algorithm and application to oscillations. Clinical Neurophysiology.
 
-Bailey NW, Hill AT, Biabani M, Murphy OW, Rogasch NC, McQueen B, Miljevic A, Fitzgerald PB (2022). Introducing RELAX (the Reduction of Electroencephalographic Artifacts): A fully automated pre-processing pipeline for cleaning EEG data – Part 2: Application to Event-Related Potentials. BioRxiv.
+Bailey, N. W., Hill, A. T., Biabani, M., Murphy, O. W., Rogasch, N. C., McQueen, B., Miljevic, A., & Fitzgerald, P. B. (2023). RELAX part 2: A fully automated EEG data cleaning algorithm that is applicable to Event-Related-Potentials. Clinical Neurophysiology.
