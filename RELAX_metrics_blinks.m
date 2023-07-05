@@ -30,13 +30,41 @@ function [continuousEEG, epochedEEG, BlinkMetricProblem] = RELAX_metrics_blinks(
             EpochsWithMultipleBlinks(e)=sum(contains(string(blinkEEG.epoch(e).eventtype),"EyeBlinkMax"));     
         end
         blinkEEG = pop_select(blinkEEG, 'notrial', find(EpochsWithMultipleBlinks>1));
+
+        % 1.1.4: fixed to relate to file specific sampling rate
+
+        % Calculate the absolute difference between the EEG.times and the timepoints we need:
+        absDiff_500ms = abs(EEG.times - 500);
+        % Find the minimum absolute difference
+        minDiff_500ms = min(absDiff_500ms(:));
+        % Find the indices of the closest number
+        [~, col_500ms] = find(absDiff_500ms == minDiff_500ms);
+        % 3500ms:
+        absDiff_3500ms = abs(EEG.times - 3500);
+        % Find the minimum absolute difference
+        minDiff_3500ms = min(absDiff_3500ms(:));
+        % Find the indices of the closest number
+        [~, col_3500ms] = find(absDiff_3500ms == minDiff_3500ms);
+        % 1500ms:
+        absDiff_1500ms = abs(EEG.times - 1500);
+        % Find the minimum absolute difference
+        minDiff_1500ms = min(absDiff_1500ms(:));
+        % Find the indices of the closest number
+        [~, col_1500ms] = find(absDiff_1500ms == minDiff_1500ms);
+        % 2500ms:
+        absDiff_2500ms = abs(EEG.times - 2500);
+        % Find the minimum absolute difference
+        minDiff_2500ms = min(absDiff_2500ms(:));
+        % Find the indices of the closest number
+        [~, col_2500ms] = find(absDiff_2500ms == minDiff_2500ms);
+
         % baseline correct data:
-        blinkEEG.data=blinkEEG.data-mean(blinkEEG.data(:,[1:501,3501:4001],:),2);
+        blinkEEG.data=blinkEEG.data-mean(blinkEEG.data(:,[1:col_500ms,col_3500ms:size(blinkEEG.data,2)],:),2); % 1.1.4: fixed to relate to file specific sampling rate
         % convert to absolute values:
         absolutevaluesblink=abs(blinkEEG.data);
         % calculate 
         for e=1:size(blinkEEG.epoch,2)
-            BlinkAmplitudeRatioAllEpochs(1:size(absolutevaluesblink,1),1,e)=mean(absolutevaluesblink(:,1500:2500,e),2)./mean(absolutevaluesblink(:,[1:501,3501:4001],e),2);
+            BlinkAmplitudeRatioAllEpochs(1:size(absolutevaluesblink,1),1,e)=mean(absolutevaluesblink(:,col_1500ms:col_2500ms,e),2)./mean(absolutevaluesblink(:,[1:col_500ms,col_3500ms:size(blinkEEG.data,2)],e),2); % 1.1.4: fixed to relate to file specific sampling rate
         end
         BlinkAmplitudeRatio(1:size(BlinkAmplitudeRatioAllEpochs,1),1)=mean(BlinkAmplitudeRatioAllEpochs,3);
         if continuousEEG.RELAX.Data_has_been_cleaned==0

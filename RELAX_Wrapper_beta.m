@@ -98,7 +98,12 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants' 'WarningAboutFileNumber';
     %% Load data (assuming the data is in EEGLAB .set format):
-    
+
+    %  1.1.4: fix error where PREP seems to be removed from the path after an
+    % EEGLAB update:
+    PrepFileLocation = which('pop_prepPipeline','-all');
+    PrepFolderLocation=extractBefore(PrepFileLocation,'pop_prepPipeline.m');
+
     cd(RELAX_cfg.myPath);
     EEG = pop_loadset(RELAX_cfg.filename);
 
@@ -175,10 +180,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         % Use TESA to apply butterworth filter: 
         EEG = RELAX_filtbutter( EEG, RELAX_cfg.LineNoiseFrequency-3, RELAX_cfg.LineNoiseFrequency+3, 4, 'bandstop' );
     end
-    if strcmp(RELAX_cfg.NotchFilterType,'ZaplinePlus')
-        [EEG ] = clean_data_with_zapline_plus_eeglab_wrapper(EEG,struct('plotResults',0)); % requires the zapline plus plugin
-    end
-    
+
     if strcmp(RELAX_cfg.LowPassFilterBeforeMWF,'no') % updated implementation, avoiding low pass filtering prior to MWF reduces chances of rank deficiencies, increasing potential values for MWF delay period 
         if strcmp(RELAX_cfg.FilterType,'Butterworth')
             EEG = RELAX_filtbutter( EEG, RELAX_cfg.HighPassFilter, [], 4, 'highpass' );
@@ -188,12 +190,22 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
         end
     end
     
-    if strcmp(RELAX_cfg.LowPassFilterBeforeMWF,'yes') % original implementation, not recommended as increases chances of rank deficiencies
+    if strcmp(RELAX_cfg.LowPassFilterBeforeMWF,'yes') % original implementation, not recommended unless downsampling, as increases chances of rank deficiencies
         EEG = RELAX_filtbutter( EEG, RELAX_cfg.HighPassFilter, RELAX_cfg.LowPassFilter, 4, 'bandpass' );
+    end
+
+    if strcmp(RELAX_cfg.DownSample,'yes')
+        EEG = pop_resample(EEG,RELAX_cfg.DownSample_to_X_Hz); % downsample data (if applied, should always be applied after low pass filtering)
+        RELAX_cfg.ms_per_sample=(1000/EEG.srate);
+    end
+
+    if strcmp(RELAX_cfg.NotchFilterType,'ZaplinePlus')
+        [EEG ] = clean_data_with_zapline_plus_eeglab_wrapper(EEG,struct('plotResults',0)); % requires the zapline plus plugin. Best applied after downsampling to 250Hz or 500Hz.
     end
 
     %% Clean flat channels and bad channels showing improbable data:
     % PREP pipeline: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4471356/
+    addpath(genpath(PrepFolderLocation{1,1})); %  1.1.4: fix error where PREP seems to be removed from the path after an EEGLAB update
     noisyOut = findNoisyChannels(EEG);  
     EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject={};
     for x=1:size(noisyOut.noisyChannels.all,2) % loop through output of PREP's findNoisyChannels and take a record of noisy electrodes for deletion:
@@ -577,8 +589,8 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
 
     %% Record warnings about potential issues:
     EEG.RELAX_issues_to_check.aFileName=cellstr(FileName);
-    if size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2)>RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
-        EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2);
+    if size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,1)>RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
+        EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,1); % 1.1.4: fix dimension specification error
     else
         EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=0;
     end

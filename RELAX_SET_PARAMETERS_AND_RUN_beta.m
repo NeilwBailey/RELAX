@@ -240,7 +240,12 @@ RELAX_cfg.HorizontalEyeMovementTimepointsExceedingThreshold=25; % The number of 
 RELAX_cfg.HorizontalEyeMovementTimepointsTestWindow=(2*RELAX_cfg.HorizontalEyeMovementTimepointsExceedingThreshold)-1; % Window duration to test for horizontal eye movement, set to 2x the value above by default.
 RELAX_cfg.HorizontalEyeMovementFocus=200; % Buffer window, masking periods earlier and later than the time where horizontal eye movements exceed the threshold.
 
-RELAX_cfg.LowPassFilterBeforeMWF='no'; % set as no for the updated implementation, avoiding low pass filtering prior to MWF reduces chances of rank deficiencies, increasing potential values for MWF delay period 
+RELAX_cfg.LowPassFilterBeforeMWF='no'; % set as no for the updated implementation
+% avoiding low pass filtering prior to MWF reduces chances of rank deficiencies increasing potential values for MWF delay period 
+% (downsampling the data after filtering also reduces the chances of rank deficiencies) 
+RELAX_cfg.DownSample='no'; % set to 'yes' if you wish to downsample the data
+RELAX_cfg.DownSample_to_X_Hz=250; % frequency to downsample to (in samples per second / Hz)
+
 RELAX_cfg.FilterType='Butterworth'; % set as 'pop_eegfiltnew' to use EEGLAB's filter or 'Butterworth' to use Butterworth filter
 RELAX_cfg.HighPassFilter=0.25; % Sets the high pass filter. 1Hz is best for ICA decomposition if you're examining just oscillatory data, 0.25Hz seems to be the highest before ERPs are adversely affected by filtering 
 %(lower than 0.2Hz may be better, but I find a minority of my files show drift at 0.3Hz even).

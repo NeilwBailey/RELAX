@@ -219,6 +219,12 @@ end
 if ~isfield(RELAX_cfg,'LowPassFilter')
     RELAX_cfg.LowPassFilter=80; % If you filter out data below 75Hz, you can't use the objective muscle detection method
 end
+if ~isfield(RELAX_cfg,'DownSample')
+    RELAX_cfg.DownSample=0; % set to 1 if you wish to downsample the data
+end
+if ~isfield(RELAX_cfg,'DownSample_to_X_Hz')
+    RELAX_cfg.DownSample_to_X_Hz=250; % frequency to downsample to (in samples per second / Hz)
+end
 if ~isfield(RELAX_cfg,'LineNoiseFrequency')
     RELAX_cfg.LineNoiseFrequency=50; % Frequencies for bandstop filter in order to address line noise (set to 60 in countries with 60Hz line noise, and 50 in countries with 50Hz line noise).
 end
@@ -268,55 +274,6 @@ end
 if ~isfield(RELAX_cfg,'MWFDelayPeriod')
     RELAX_cfg.MWFDelayPeriod=16; % The MWF includes both spatial and temporal information when filtering out artifacts. Longer delays apparently improve performance. 
 end
-%% Notes on the above parameter settings:
-% OnlyIncludeTaskRelatedEpochs: this means the MWF cleaning templates 
-% won't be distracted by potential large artifacts outside of task related
-% periods. However, it also may mean that event related periods are
-% included in the artifact template (to be removed). If artifact masks land
-% disproportionately around triggers (or certain types of triggers), my
-% sense is that all the EEG activity time locked to that trigger will be
-% considered an artifact and filtered out by the MWF (including ERPs),
-% potentially reducing your ERP for example. An alternative solution to
-% this would be to record a sufficient amount of activity before / after
-% the task related activity, which includes all the same artifacts as
-% within the task, but also a sufficient amount of clean data. Then use
-% this data to create the artifact masks (then perhaps marking the task 
-% related data as only either clean, or NaNs if they contain artifacts
-% (which will be cleaned but aren't thought of as artifacts for the
-% artifact template). This would prevent the ERP activity of interest from
-% being included in the artifact tempalte (and potentially cleaned)
-
-% Delay periods >5 can lead to generalised eigenvector rank deficiency
-% in some files, and if this occurs cleaning is ineffective. Delay
-% period = 5 was used by Somers et al (2018). The rank deficiency is
-% likely to be because data filtering creates a temporal
-% dependency between consecutive datapoints, reducing their
-% independence when including the temporal aspect in the MWF
-% computation. To address this, the MWF function attempts MWF cleaning
-% at the delay period set above, but if rank deficiency occurs,
-% it reduces the delay period by 1 and try again (for 3
-% iterations).
-
-% Using robust detrending (which does not create any temporal
-% dependence,unlike filtering) may be an alternative which avoids rank
-% deficiency (but our initial test suggested this led to worse cleaning
-% than filtering)
-
-% MuscleSlopeThreshold: (-0.31 = data from paralysed participants showed no
-% independent components with a slope value more positive than this (so
-% excluding slopes above this threshold means only excluding data that we
-% know must be influenced by EMG). Using -0.31 as the threshold means
-% possibly leaving low level EMG data in, and only eliminating the data we
-% know is definitely EMG)
-% (-0.59 is where the histograms between paralysed ICs and EMG ICs cross,
-% so above this value contains a very small amount of the brain data, 
-% and over 50% of the EMG data. Above this point, data is more likely to be
-% EMG than brain)
-% (-0.72 is the maximum of the histogram of the paralysed IC data, so
-% excluding more positive values than this will exclude most of the EMG
-% data, but also some brain data).
-
-% Fitzgibbon, S. P., DeLosAngeles, D., Lewis, T. W., Powers, D. M. W., Grummett, T. S., Whitham, E. M., ... & Pope, K. J. (2016). Automatic determination of EMG-contaminated components and validation of independent component analysis using EEG during pharmacologic paralysis. Clinical Neurophysiology, 127(3), 1781-1793.
 
 %% GENERATE THE GUI
 
@@ -356,7 +313,7 @@ LineNoiseOptions={'Butterworth','ZaplinePlus'};
 % GUI layout
 geometry = {[0.5 1.0 0.2 1.0 1.0 0.2] ... % setting directory / file to process
             1 ...
-            [0.6 1.5 0.2 0.75 1.2] ... % setting cap location file and electrodes to exclude
+            [0.6 1.5 0.2 0.75 0.8 0.8 0.3 0.8 0.2] ... % setting cap location file and electrodes to exclude
             1 ...
             [4 1.1 3 0.7 2.75 .75 2 1.2 2 1.2] ... % bandpass filter settings
             1 ...
@@ -400,6 +357,10 @@ uilist = {{'style', 'text', 'string', 'Raw data folder:','fontweight','bold','fo
           { 'style' 'pushbutton' 'string' '...' 'callback' commandload2 ,'fontsize', 9}... 
           {'style', 'text', 'string', 'Electrodes to exclude:','fontweight','bold','fontsize', 9} ...
           {'style', 'edit', 'string', ''} ...
+          {'style', 'text', 'string', 'Downsample Data?','fontweight','bold','fontsize', 9} ...
+          {'style', 'popupmenu', 'string', YesNoOptions, 'tag', 'YesNoOpts','Value',1,'fontsize', 9} ...
+          {'style', 'text', 'string', 'Downsample to:','fontsize', 9} ...
+          {'style', 'edit', 'string', [],'fontsize', 9}...
           {}...
           {'style', 'text', 'string', 'Bandpass Filter [highpass, lowpass]:','fontsize', 9} ...
           {'style', 'edit', 'string', [num2str(RELAX_cfg.HighPassFilter), '  ', num2str(RELAX_cfg.LowPassFilter)],'fontsize', 9}...
@@ -509,49 +470,56 @@ RELAX_cfg.myPath = result{1};
 RELAX_cfg.filename = result{2};
 RELAX_cfg.caploc = result{3};
 RELAX_cfg.ElectrodesToDelete = strtrim(strsplit(strrep(result{4},',','')))';
-BandPassFilterSettings=strsplit(strrep(result{5},',',''));
+
+RELAX_cfg.DownSample=YesNoOptions{result{5}}; 
+RELAX_cfg.DownSample_to_X_Hz=str2double(result{6}); 
+
+BandPassFilterSettings=strsplit(strrep(result{7},',',''));
 RELAX_cfg.HighPassFilter=str2double(BandPassFilterSettings(1,1));
 RELAX_cfg.LowPassFilter=str2double(BandPassFilterSettings(1,2));
-RELAX_cfg.LineNoiseFrequency=str2double(result{6});
-RELAX_cfg.LowPassFilterBeforeMWF=YesNoOptions{result{7}};
-RELAX_cfg.FilterType=BandPassFilterOptions{result{8}};
-RELAX_cfg.NotchFilterType=LineNoiseOptions{result{9}};
-RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=str2double(result{10});
-RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=str2double(result{11});
-RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=str2double(result{12});
-RELAX_cfg.ExtremeAbsoluteVoltageThreshold=str2double(result{13});
-RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=str2double(result{14});
-RELAX_cfg.ExtremeSingleChannelKurtosisThreshold=str2double(result{15});
-RELAX_cfg.ExtremeAllChannelKurtosisThreshold=str2double(result{16});
-RELAX_cfg.ExtremeVoltageShiftThreshold=str2double(result{17});
-RELAX_cfg.ExtremeBlinkShiftThreshold=str2double(result{18});
-RELAX_cfg.ExtremeDriftSlopeThreshold=str2double(result{19});
-RELAX_cfg.MWFDelayPeriod=str2double(result{20});
-RELAX_cfg.Do_MWF_Once=result{21}; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no).
-RELAX_cfg.Do_MWF_Twice=result{22}; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no).
-RELAX_cfg.Do_MWF_Thrice=result{23};
-RELAX_cfg.Perform_wICA_on_ICLabel=result{24};
-RELAX_cfg.Perform_ICA_subtract=result{24}-1;
-RELAX_cfg.ICA_method = icaOptions{result{25}};
-RELAX_cfg.ProbabilityDataHasNoBlinks=(result{26})-1;
-RELAX_cfg.BlinkElectrodes= strtrim(strsplit(strrep(result{27},',','')))';
-RELAX_cfg.LowPassFilterAt_6Hz_BeforeDetectingBlinks=YesNoOptions{result{28}};
-RELAX_cfg.HEOGLeftpattern = string(strtrim(strsplit(strrep(result{29},',',''))));
-RELAX_cfg.HEOGRightpattern= string(strtrim(strsplit(strrep(result{30},',',''))));
-RELAX_cfg.MuscleSlopeThreshold=str2double(result{31});
-RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=str2double(result{32});
-RELAX_cfg.DriftSeverityThreshold=str2double(result{33});
-RELAX_cfg.ProportionWorstEpochsForDrift=str2double(result{34});
-RELAX_cfg.HorizontalEyeMovementThreshold=str2double(result{35});
-RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning=YesNoOptions{result{36}};
-FilesToProcess=strsplit(strrep(result{37},',',''));
+RELAX_cfg.LineNoiseFrequency=str2double(result{8});
+RELAX_cfg.LowPassFilterBeforeMWF=YesNoOptions{result{9}};
+if strcmp(RELAX_cfg.DownSample,'yes')
+    RELAX_cfg.LowPassFilterBeforeMWF='yes';
+end
+RELAX_cfg.FilterType=BandPassFilterOptions{result{10}};
+RELAX_cfg.NotchFilterType=LineNoiseOptions{result{11}};
+RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted=str2double(result{12});
+RELAX_cfg.ProportionOfExtremeNoiseAboveWhichToRejectChannel=str2double(result{13});
+RELAX_cfg.ProportionOfMuscleContaminatedEpochsAboveWhichToRejectChannel=str2double(result{14});
+RELAX_cfg.ExtremeAbsoluteVoltageThreshold=str2double(result{15});
+RELAX_cfg.ExtremeImprobableVoltageDistributionThreshold=str2double(result{16});
+RELAX_cfg.ExtremeSingleChannelKurtosisThreshold=str2double(result{17});
+RELAX_cfg.ExtremeAllChannelKurtosisThreshold=str2double(result{18});
+RELAX_cfg.ExtremeVoltageShiftThreshold=str2double(result{19});
+RELAX_cfg.ExtremeBlinkShiftThreshold=str2double(result{20});
+RELAX_cfg.ExtremeDriftSlopeThreshold=str2double(result{21});
+RELAX_cfg.MWFDelayPeriod=str2double(result{22});
+RELAX_cfg.Do_MWF_Once=result{23}; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no).
+RELAX_cfg.Do_MWF_Twice=result{24}; % 1 = Perform the MWF cleaning a second time (1 for yes, 0 for no).
+RELAX_cfg.Do_MWF_Thrice=result{25};
+RELAX_cfg.Perform_wICA_on_ICLabel=result{26};
+RELAX_cfg.Perform_ICA_subtract=result{26}-1;
+RELAX_cfg.ICA_method = icaOptions{result{27}};
+RELAX_cfg.ProbabilityDataHasNoBlinks=(result{28})-1; %
+RELAX_cfg.BlinkElectrodes= strtrim(strsplit(strrep(result{29},',','')))';
+RELAX_cfg.LowPassFilterAt_6Hz_BeforeDetectingBlinks=YesNoOptions{result{30}};
+RELAX_cfg.HEOGLeftpattern = string(strtrim(strsplit(strrep(result{31},',',''))));
+RELAX_cfg.HEOGRightpattern= string(strtrim(strsplit(strrep(result{32},',',''))));
+RELAX_cfg.MuscleSlopeThreshold=str2double(result{33});
+RELAX_cfg.MaxProportionOfDataCanBeMarkedAsMuscle=str2double(result{34});
+RELAX_cfg.DriftSeverityThreshold=str2double(result{35});
+RELAX_cfg.ProportionWorstEpochsForDrift=str2double(result{36});
+RELAX_cfg.HorizontalEyeMovementThreshold=str2double(result{37});
+RELAX_cfg.InterpolateRejectedElectrodesAfterCleaning=YesNoOptions{result{38}};
+FilesToProcess=strsplit(strrep(result{39},',',''));
 RELAX_cfg.FilesToProcess=str2double(FilesToProcess(1,1)):str2double(FilesToProcess(1,2));
-RELAX_cfg.computerawmetrics=result{38};
-RELAX_cfg.computecleanedmetrics=result{39};
-RELAX_cfg.saveextremesrejected=result{40};
-RELAX_cfg.saveround1=result{41};
-RELAX_cfg.saveround2=result{42};
-RELAX_cfg.saveround3=result{43};
+RELAX_cfg.computerawmetrics=result{40};
+RELAX_cfg.computecleanedmetrics=result{41};
+RELAX_cfg.saveextremesrejected=result{42};
+RELAX_cfg.saveround1=result{43};
+RELAX_cfg.saveround2=result{44};
+RELAX_cfg.saveround3=result{45};
 
 if ~isfield(RELAX_cfg,'filename')
     RELAX_cfg.filename = [];

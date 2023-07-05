@@ -98,6 +98,11 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
     clearvars -except 'RELAX_cfg' 'FileNumber' 'CleanedMetrics' 'RawMetrics' 'RELAXProcessingRoundOneAllParticipants' 'RELAXProcessingRoundTwoAllParticipants' 'RELAXProcessing_wICA_AllParticipants'...
         'RELAXProcessing_ICA_AllParticipants' 'RELAXProcessingRoundThreeAllParticipants' 'Warning' 'RELAX_issues_to_check' 'RELAXProcessingExtremeRejectionsAllParticipants' 'WarningAboutFileNumber';
     %% Load data (assuming the data is in EEGLAB .set format):
+
+    % 1.1.4: fix error where PREP seems to be removed from the path after an
+    % EEGLAB update:
+    PrepFileLocation = which('pop_prepPipeline','-all');
+    PrepFolderLocation=extractBefore(PrepFileLocation,'pop_prepPipeline.m');
     
     cd(RELAX_cfg.myPath);
     EEG = pop_loadset(RELAX_cfg.filename);
@@ -172,6 +177,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
 
     %% Clean flat channels and bad channels showing improbable data:
     % PREP pipeline: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4471356/
+    addpath(genpath(PrepFolderLocation{1,1})); %  1.1.4: fix error where PREP seems to be removed from the path after an EEGLAB update
     noisyOut = findNoisyChannels(EEG);  
     EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject={};
     for x=1:size(noisyOut.noisyChannels.all,2) % loop through output of PREP's findNoisyChannels and take a record of noisy electrodes for deletion:
@@ -544,8 +550,8 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
 
     %% Record warnings about potential issues:
     EEG.RELAX_issues_to_check.aFileName=cellstr(FileName);
-    if size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2)>RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
-        EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,2);
+    if size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,1)>RELAX_cfg.MaxProportionOfElectrodesThatCanBeDeleted*size(EEG.allchan,2)
+        EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=size(EEG.RELAXProcessingExtremeRejections.PREPBasedChannelToReject,1); % 1.1.4: fix dimension specification error
     else
         EEG.RELAX_issues_to_check.PREP_rejected_too_many_electrodes=0;
     end
