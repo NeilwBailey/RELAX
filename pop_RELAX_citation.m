@@ -45,7 +45,7 @@ uilist = {{'style', 'text', 'string', 'If you use RELAX, please cite the followi
           
           result = inputgui('geometry', geometry, 'geomvert', [1 .2 2 .2 1 0.2 2 0.2 1 0.2],  'uilist', uilist, 'title', 'RELAX citation',  'helpcom', 'pophelp(''pop_RELAX_citation'')');
           
-          RELAX_citation = {'Bailey, N., Biabani, M., Hill, A. T., Miljevic, A., Rogasch, N. C., McQueen, B., Murphy, O.W., & Fitzgerald, P. (2022). Introducing RELAX: An automated pre-processing pipeline for cleaning EEG data - Part 1: Algorithm and application to oscillations. Clinical Neurophysiology.';...
-              'Bailey, N., Hill, A. T., Biabani, M., Murphy, O. W., Rogasch, N. C., McQueen, B., Miljevic, A., & Fitzgerald, P. (2022). RELAX part 2: A fully automated EEG data cleaning algorithm that is applicable to event-related-potentials. Clinical Neurophysiology.'};
+          RELAX_citation = {'Bailey, N., Biabani, M., Hill, A. T., Miljevic, A., Rogasch, N. C., McQueen, B., Murphy, O.W., & Fitzgerald, P. (2023). Introducing RELAX: An automated pre-processing pipeline for cleaning EEG data - Part 1: Algorithm and application to oscillations. Clinical Neurophysiology.';...
+              'Bailey, N., Hill, A. T., Biabani, M., Murphy, O. W., Rogasch, N. C., McQueen, B., Miljevic, A., & Fitzgerald, P. (2023). RELAX part 2: A fully automated EEG data cleaning algorithm that is applicable to event-related-potentials. Clinical Neurophysiology.'};
           
 end
