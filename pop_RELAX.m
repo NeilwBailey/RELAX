@@ -48,12 +48,13 @@ end
 
 % Specify your electrode locations with the correct cap file:
 if ~isfield(RELAX_cfg,'caploc')
-    RELAX_cfg.caploc='C:\Analysis_Tools\CapLocationFiles\standard-10-5-cap385.elp'; %path containing electrode positions
+    eeglab_dir = fileparts(which('eeglab'));
+    RELAX_cfg.caploc=fullfile(eeglab_dir, 'sample_locs', 'standard-10-5-cap385.elp'); %path containing electrode positions
 end
 
 % Specify the to be processed file locations:
 if ~isfield(RELAX_cfg,'myPath')
-    RELAX_cfg.myPath='C:\DATA_TO_BE_PREPROCESSED\';
+    RELAX_cfg.myPath=[pwd filesep];
 end
 
 % Specify whether all data is in a single folder or data are in BIDS format
