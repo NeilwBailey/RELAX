@@ -539,7 +539,7 @@ for FileNumber=RELAX_cfg.FilesToProcess(1,1:size(RELAX_cfg.FilesToProcess,2))
 
         if RELAX_cfg.saveround3==1
             if ~exist([RELAX_cfg.foldername, filesep 'RELAXProcessed' filesep '3xMWF'], 'dir')
-                mkdir([RRELAX_cfg.foldername, filesep 'RELAXProcessed' filesep '3xMWF'])
+                mkdir([RELAX_cfg.foldername, filesep 'RELAXProcessed' filesep '3xMWF'])
             end
             SaveSetMWF3 =[RELAX_cfg.foldername,filesep 'RELAXProcessed' filesep '3xMWF', filesep FileName '_MWF3.set'];    
             EEG = pop_saveset( EEG, SaveSetMWF3 ); 
